@@ -1,8 +1,8 @@
 """Rellena data/precios.json con precios de mercado actuales (ejecutar una vez al instalar,
 o cuando quieras refrescar). Tarda unos minutos."""
 import os, sys, time
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from radar import main, wallapop
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import main, wallapop
 
 CONSULTAS = ['iphone se', 'iphone xr', 'iphone xs', 'iphone 11', 'iphone 11 pro', 'iphone 11 pro max',
              'iphone 12', 'iphone 12 mini', 'iphone 12 pro', 'iphone 12 pro max',

@@ -10,11 +10,11 @@ import urllib.parse
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
-from . import analisis, config, telegram, wallapop
+import analisis, config, telegram, wallapop
 
-RAIZ = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-DATOS = os.path.join(RAIZ, 'data')
-WEB = os.path.join(RAIZ, 'docs')
+RAIZ = os.path.dirname(os.path.abspath(__file__))
+DATOS = RAIZ   # todo va en la carpeta principal del repositorio
+WEB = RAIZ
 MADRID = ZoneInfo('Europe/Madrid')
 CONDICION = {'new': 'nuevo', 'as_good_as_new': 'como nuevo', 'good': 'buen estado',
              'fair': 'aceptable', 'has_given_it_all': 'lo ha dado todo'}

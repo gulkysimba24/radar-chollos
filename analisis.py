@@ -3,7 +3,7 @@ import math
 import re
 import statistics
 
-from . import config
+import config
 
 # ---------------------------------------------------------------- modelos
 _IPH = re.compile(r'iphone\s*(se|xs\s*max|xr|xs|x|1[0-7]e?|[89])\b\s*(pro\s*max|pro|plus|mini|max)?', re.I)

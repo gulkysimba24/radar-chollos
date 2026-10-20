@@ -5,7 +5,7 @@ import sys
 import time
 import urllib.parse
 
-from . import config
+import config
 
 API = 'https://api.wallapop.com/api/v3'
 HEADERS = ['-H', 'X-DeviceOS: 0', '-H', 'Accept-Language: es-ES,es;q=0.9',

@@ -337,7 +337,7 @@ def estudio(seguidos, ventas, venta_modelo, aprendido):
                         'fin': v['fin'], 'zona': v.get('z')})
 
     modelos = sorted({r['modelo'] for r in filas if r['familia'] == 'iphone'},
-                     key=lambda s: [int(n) if n.isdigit() else n for n in s.replace('iPhone ', '').split()])
+                     key=lambda s: [(0, int(n), '') if n.isdigit() else (1, 0, n) for n in s.replace('iPhone ', '').split()])
     tabla = {}
     for m in modelos:
         piezas, _ = analisis.coste_piezas('iphone', m, None)

@@ -791,9 +791,16 @@ def ejecutar():
                           ('vigilar.json', vigilar), ('temas.json', temas), ('mercado.json', seguidos), ('ventas.json', VENTAS)):
         guardar(nombre, datos)
     exportar(activos)
-    aprender_y_estudiar(precios, seguidos, registro, condicion)
-    exportar_analizador(precios)
-    resumen_diario(activos, VENTAS, registro, est, temas)
+    # lo que viene ahora es extra: si algo falla, se avisa en el registro pero la pasada no se pierde
+    for nombre, paso in (('estudio', lambda: aprender_y_estudiar(precios, seguidos, registro, condicion)),
+                         ('analizador', lambda: exportar_analizador(precios)),
+                         ('resumen diario', lambda: resumen_diario(activos, VENTAS, registro, est, temas))):
+        try:
+            paso()
+        except Exception as ex:
+            import traceback
+            traceback.print_exc()
+            print(f'aviso: falló el paso «{nombre}»: {ex}', file=sys.stderr)
     print(f'{len(vistos_items)} anuncios revisados · {len(nuevos)} nuevos de modelos que tratamos · '
           f'{avisados} avisos · {bajadas} bajadas de precio · {len(vigilar)} vigilados · '
           f'mercado: {len(seguidos)} seguidos (+{barridos} del barrido), {cerrados} vendidos/retirados en esta pasada, {len(VENTAS)} ventas en memoria · '

@@ -292,7 +292,7 @@ def ficha_web(a, estado='activo'):
         'riesgo': d.get('riesgo'), 'pct_mercado': d.get('pct_mercado'), 'categoria': d.get('categoria'),
         'motivo_trampa': d.get('motivo_trampa'), 'foto': a.get('foto'), 'bateria': a.get('bateria'),
         'dias_venta': a.get('dias_venta'), 'fuente_venta': d.get('fuente_venta'), 'coste_reparacion': d.get('coste_reparacion'),
-        'precio_bueno': d.get('precio_bueno'), 'limite': d.get('limite'), 'venta_rango': d.get('venta_rango'),
+        'reservado': bool(a.get('reservado')), 'precio_bueno': d.get('precio_bueno'), 'limite': d.get('limite'), 'venta_rango': d.get('venta_rango'),
         'fiabilidad': d.get('fiabilidad'), 'factor_estado': d.get('factor_estado'),
         'precio_inicial': a.get('precio_inicial', a['precio']),
     }
@@ -314,16 +314,17 @@ def revisar_conocidos(activos, vigilar, temas, precios):
     avisos = 0
     limite = ahora_ms() - config.DIAS_ACTIVO * 86400000
     pendientes = sorted([a for a in activos.values() if a.get('estado', 'activo') == 'activo' and a['avisado_ms'] >= limite],
-                        key=lambda a: a.get('revisado_ms', 0))[:40]
+                        key=lambda a: a.get('revisado_ms', 0))[:80]
     for a in pendientes:
         det = wallapop.detalle(a['id'])
         a['revisado_ms'] = ahora_ms()
         if det == 'error':
             continue
-        if det is None:
+        if det is None or wallapop.flag(det.get('sold')):
             a['estado'] = 'vendido'
             telegram.editar(a.get('msg_id'), '❌ <b>Ya no está a la venta</b> (vendido o retirado)\n\n' + texto_aviso(a), foto=a.get('foto'))
             continue
+        a['reservado'] = wallapop.flag(det.get('reserved'))
         nuevo = float(((det.get('price') or {}).get('cash') or {}).get('amount') or a['precio'])
         if nuevo < a['precio'] - 0.5:
             antes = a['precio']

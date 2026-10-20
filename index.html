@@ -108,6 +108,8 @@ input[type=checkbox] { accent-color: var(--chollazo); width: 16px; height: 16px;
 .pin.trampa::after { border-top-color: var(--trampa); }
 .pin .q { display: inline-grid; place-items: center; width: 16px; height: 16px; border-radius: 50%; background: var(--trampa); color: #1A1230; font-size: 12px; margin-left: 2px; }
 .pin.off { --c: var(--off); opacity: .7; text-decoration: line-through; }
+.pin.res { opacity: .5; }
+.card.res { opacity: .65; }
 .pin.sel { box-shadow: 0 0 0 3px var(--ink), 0 3px 12px rgba(0,0,0,.6); }
 .pin.chollazo .onda { position: absolute; inset: 0; border-radius: 999px; border: 2px solid var(--chollazo); pointer-events: none; animation: onda 2.2s cubic-bezier(.2,.6,.3,1) infinite; }
 .pin.chollazo .onda.o2 { animation-delay: .73s; } .pin.chollazo .onda.o3 { animation-delay: 1.46s; }
@@ -618,11 +620,11 @@ function visibles() {
   const pb = c => c.beneficio * (cat(c) === 'trampa' ? 0.4 : c.riesgo === 'medio' ? 0.75 : 1);
   const k = { beneficio: (a, b) => pb(b) - pb(a), km: (a, b) => (a.km ?? 99) - (b.km ?? 99), nuevo: (a, b) => b.avisado_ms - a.avisado_ms,
               rapido: (a, b) => (a.dias_venta ?? 99) - (b.dias_venta ?? 99) || pb(b) - pb(a) }[S.orden];
-  return l.sort((a, b) => (a.estado === 'vendido') - (b.estado === 'vendido') || (S.orden === 'beneficio' ? peso[cat(b)] - peso[cat(a)] : 0) || k(a, b));
+  return l.sort((a, b) => (a.estado === 'vendido') - (b.estado === 'vendido') || !!a.reservado - !!b.reservado || (S.orden === 'beneficio' ? peso[cat(b)] - peso[cat(a)] : 0) || k(a, b));
 }
 function marcador(c) {
   const k = c.estado === 'vendido' ? 'off' : cat(c);
-  return `<div class="pin ${k} ${S.sel === c.id ? 'sel' : ''}">`
+  return `<div class="pin ${k} ${c.reservado ? 'res' : ''} ${S.sel === c.id ? 'sel' : ''}">`
     + (k === 'chollazo' ? '<i class="onda"></i><i class="onda o2"></i><i class="onda o3"></i>' : '')
     + (c.familia === 'iphone' ? ICO.apple : ICO.android) + `<span>${Math.round(c.precio)}€</span>`
     + (c.tipo === 'reparar' ? `<span class="rep">${ICO.reparar}</span>` : '')
@@ -643,6 +645,7 @@ function fichaHTML(c, o = {}) {
   const bajada = c.precio_inicial && c.precio_inicial > c.precio ? `<div class="drop">↓ Ha bajado de ${eur(c.precio_inicial)} a ${eur(c.precio)}</div>` : '';
   const g = gasolina(c.km);
   const chips = [
+    c.reservado && !vend ? `<span class="chip">⏸️ <b>Reservado</b>: puede que lo venda a otro</span>` : '',
     g ? `<span class="chip">⛽ <b>${eur2(g.euros)}</b> ida y vuelta</span>` : '',
     c.dias_venta != null ? `<span class="chip">⏱️ se vende en <b>~${String(c.dias_venta).replace('.', ',')} días</b></span>` : '',
     c.bateria ? `<span class="chip">🔋 <b>${c.bateria} %</b></span>` : '',
@@ -652,7 +655,7 @@ function fichaHTML(c, o = {}) {
       <div class="a"><span>🟡 Máximo</span><b>${eur(c.max)}</b></div>
       <div class="r"><span>🔴 Tope</span><b>${eur(c.limite)}</b></div></div>` : '';
   const on = guardado(c.id);
-  return `<article class="card ${k} ${S.sel === c.id && !o.sinSel ? 'sel' : ''}" ${o.sinSel ? '' : `id="c-${esc(c.id)}"`}>
+  return `<article class="card ${k} ${c.reservado && !vend ? 'res' : ''} ${S.sel === c.id && !o.sinSel ? 'sel' : ''}" ${o.sinSel ? '' : `id="c-${esc(c.id)}"`}>
     <div class="top"><span class="tag">${o.tag || (vend ? 'Vendido' : CAT_TXT[cat(c)])}</span>
       <span class="kind">${c.familia === 'iphone' ? ICO.apple : ICO.android}${esc(tipo)}${c.avisado_ms ? ' · ' + esc(hace(c.avisado_ms)) : ''}</span></div>
     <div class="head">${c.foto ? `<img class="foto" src="${esc(c.foto)}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove()">` : ''}

@@ -1,0 +1,24 @@
+{
+ "compras": [
+  {
+   "id": "c1792523758630",
+   "quien": "Gulkyismba24",
+   "creado_ms": 1792523758630,
+   "wid": "v6gp92gey56e",
+   "venta_estimada": 315,
+   "modelo": "iPhone 14 Plus",
+   "capacidad": "128 GB",
+   "bateria": 83,
+   "estado": "listo",
+   "precio_compra": 250,
+   "fecha_compra": "2026-10-20",
+   "reparaciones": [],
+   "gasolina": 0,
+   "otros": null,
+   "precio_venta": null,
+   "fecha_venta": "",
+   "url": "https://es.wallapop.com/item/iphone-14-plus-1315234840",
+   "notas": ""
+  }
+ ]
+}

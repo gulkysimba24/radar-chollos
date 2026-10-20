@@ -1,0 +1,49 @@
+{
+ "items": {
+  "v6gp92gey56e": {
+   "id": "v6gp92gey56e",
+   "familia": "iphone",
+   "tipo": "listo",
+   "nivel": null,
+   "modelo": "iPhone 14 Plus",
+   "capacidad": "128 GB",
+   "precio": 300,
+   "oferta": 265,
+   "max": 285,
+   "venta": 315,
+   "beneficio": 45,
+   "reparacion": [],
+   "zona": "Humanes de Madrid",
+   "km": 4,
+   "lat": 40.2577487887613,
+   "lng": -3.819314672492177,
+   "url": "https://es.wallapop.com/item/iphone-14-plus-1315234840",
+   "resumen": "Sin daños según el anuncio · Wallapop dice: como nuevo · Con caja",
+   "preguntas": [
+    "¿Qué salud tiene la batería? (Ajustes › Batería › Estado)",
+    "¿Funciona el Face ID?",
+    "¿Se ha abierto o reparado alguna vez? ¿Qué piezas se cambiaron?",
+    "¿Has quitado ya tu cuenta de iCloud? ¿Es libre de operador?"
+   ],
+   "regateo": "Ofrece 265 € recogiéndolo en mano hoy. Si en persona ves marcas, batería por debajo del 85 % o algo que no decía, úsalo para no subir. Tope 285 €.",
+   "mensaje": "Hola, me interesa el iPhone 14 Plus. ¿Sigue disponible? ¿Qué salud tiene la batería? (Ajustes › Batería › Estado) Si está como dices te puedo ofrecer 265 € y lo recojo en mano cuando te venga bien.",
+   "publicado_ms": 1792496185766,
+   "avisado_ms": 1792496519914,
+   "estado": "activo",
+   "riesgo": "bajo",
+   "pct_mercado": 86,
+   "categoria": "bueno",
+   "motivo_trampa": null,
+   "foto": null,
+   "bateria": null,
+   "dias_venta": null,
+   "fuente_venta": null,
+   "coste_reparacion": 0,
+   "precio_inicial": 300,
+   "wid": "v6gp92gey56e",
+   "por": "Striker",
+   "ms": 1792511389921,
+   "nota": ""
+  }
+ }
+}

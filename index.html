@@ -39,8 +39,8 @@ h3 { font-size: 16px; margin: 18px 0 8px; }
 
 /* navegación inferior */
 nav.tabs { position: fixed; z-index: 1000; left: 0; right: 0; bottom: 0; height: calc(var(--nav) + env(safe-area-inset-bottom)); padding-bottom: env(safe-area-inset-bottom); background: rgba(14, 18, 25, .96); backdrop-filter: blur(8px); border-top: 1px solid var(--line); display: flex; justify-content: center; }
-nav.tabs .in { display: grid; grid-template-columns: repeat(5, 1fr); width: 100%; max-width: 640px; }
-nav.tabs button { border: 0; background: none; color: var(--faint); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; font-size: 11.5px; font-weight: 700; cursor: pointer; position: relative; }
+nav.tabs .in { display: grid; grid-template-columns: repeat(6, 1fr); width: 100%; max-width: 640px; }
+nav.tabs button { border: 0; background: none; color: var(--faint); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; font-size: 11px; font-weight: 700; cursor: pointer; position: relative; padding: 0; }
 nav.tabs svg { width: 22px; height: 22px; fill: currentColor; }
 nav.tabs button[aria-current="page"] { color: var(--ink); }
 nav.tabs button[aria-current="page"]::before { content: ""; position: absolute; top: 0; left: 28%; right: 28%; height: 3px; border-radius: 0 0 3px 3px; background: var(--chollazo); }
@@ -197,6 +197,15 @@ details p { margin: 6px 0; }
 .fiab { display: inline-flex; align-items: center; gap: 4px; font-size: 11.5px; font-weight: 800; padding: 2px 8px; border-radius: 999px; }
 .fiab.alta { background: rgba(35,195,138,.15); color: #7DE3BD; } .fiab.media { background: rgba(245,165,36,.15); color: #F7C873; } .fiab.baja { background: rgba(255,140,60,.15); color: #FFB27A; }
 .caps { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.veredicto { border-radius: 12px; padding: 12px 14px; font-weight: 700; font-size: 15px; margin: 10px 14px 0 18px; }
+.veredicto.si { background: rgba(35,195,138,.12); color: #7DE3BD; border: 1px solid rgba(35,195,138,.4); }
+.veredicto.ok { background: rgba(76,141,240,.12); color: #9DC0F7; border: 1px solid rgba(76,141,240,.4); }
+.veredicto.justo { background: rgba(245,165,36,.1); color: #F7C873; border: 1px solid rgba(245,165,36,.4); }
+.veredicto.no { background: rgba(255,70,85,.1); color: #FF9AA3; border: 1px solid rgba(255,70,85,.4); }
+.veredicto small { display: block; font-weight: 500; font-size: 13px; margin-top: 3px; opacity: .9; }
+.checks { display: flex; flex-wrap: wrap; gap: 6px; }
+.checks label { display: inline-flex; align-items: center; gap: 6px; background: var(--bg); border: 1px solid var(--line2); border-radius: 999px; padding: 6px 11px; font-size: 13px; font-weight: 600; color: var(--ink); cursor: pointer; }
+.checks input { width: 15px; height: 15px; }
 .big { font: 800 34px/1 "Barlow Condensed", sans-serif; }
 .resultado { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-top: 12px; }
 .pos { color: var(--bueno) !important; } .negv { color: var(--chollazo) !important; }
@@ -294,6 +303,33 @@ dialog .df .btn { flex: 1; }
     <p class="note">La ubicación de Wallapop es aproximada. Distancias en línea recta desde <span class="orig">Fuenlabrada</span>; la gasolina se calcula con un 30 % más de recorrido por carretera. Máximo = lo más que puedes pagar para ganar lo mínimo fijado. Los morados salen mucho más baratos de lo normal o piden envío o pago por adelantado: pueden ser chollo, pero revísalos con lupa.</p>
   </section>
 
+  <!-- ===================== ANALIZAR ===================== -->
+  <section id="v-analizar" data-vista="analizar" hidden>
+    <h2>Analizador</h2>
+    <p class="sub">Pega el enlace de cualquier anuncio de Wallapop y te dice al momento si merece la pena, cuánto pagar y cuánto ganarías. Si el vendedor te da más datos (batería, golpes…), cámbialos abajo y se recalcula.</p>
+    <div class="panel">
+      <form class="form" id="f-analizar">
+        <label>Enlace del anuncio<input type="url" id="an-url" placeholder="https://es.wallapop.com/item/…" inputmode="url"></label>
+        <button class="btn main grande" type="submit">🔎 Analizar</button>
+        <span class="hint">También puedes no poner enlace y rellenar a mano el modelo y el precio de abajo.</span>
+      </form>
+    </div>
+    <div class="panel">
+      <div class="form" id="an-datos">
+        <label>Modelo<input type="text" id="an-modelo" list="lista-modelos" placeholder="iPhone 13" autocomplete="off"></label>
+        <div class="tres">
+          <label>Precio (€)<input type="number" id="an-precio" min="0" inputmode="decimal"></label>
+          <label>Capacidad<select id="an-cap" style="width:100%;min-height:42px;background:var(--bg)"></select></label>
+          <label>Batería %<input type="number" id="an-bat" min="50" max="100" inputmode="numeric" placeholder="?"></label>
+        </div>
+        <div><span class="hint" style="display:block;margin-bottom:6px">¿Qué tiene roto? (márcalo si te lo dice el vendedor)</span>
+          <div class="checks" id="an-averias"></div></div>
+        <div class="checks"><label><input type="checkbox" id="an-marcas"> Con marcas o rayas</label><label><input type="checkbox" id="an-caja"> Con caja o factura</label></div>
+      </div>
+    </div>
+    <div id="an-res"></div>
+  </section>
+
   <!-- ===================== GUARDADOS ===================== -->
   <section id="v-guardados" data-vista="guardados" hidden>
     <h2>Guardados</h2>
@@ -380,6 +416,7 @@ dialog .df .btn { flex: 1; }
 <nav class="tabs" aria-label="Apartados">
   <div class="in">
     <button type="button" data-tab="mapa"><svg viewBox="0 0 24 24"><path d="M12 2a7 7 0 0 0-7 7c0 5.2 7 13 7 13s7-7.8 7-13a7 7 0 0 0-7-7zm0 9.5A2.5 2.5 0 1 1 12 6.5a2.5 2.5 0 0 1 0 5z"/></svg>Mapa</button>
+    <button type="button" data-tab="analizar"><svg viewBox="0 0 24 24"><path d="M15.5 14h-.8l-.3-.3A6.5 6.5 0 1 0 9.5 16a6.5 6.5 0 0 0 4.2-1.6l.3.3v.8l5 5 1.5-1.5-5-5zm-6 0a4.5 4.5 0 1 1 0-9 4.5 4.5 0 0 1 0 9z"/></svg>Analizar</button>
     <button type="button" data-tab="guardados"><svg viewBox="0 0 24 24"><path d="m12 17.3 6.2 3.7-1.6-7 5.4-4.7-7.2-.6L12 2 9.2 8.7 2 9.3l5.4 4.7-1.6 7z"/></svg>Guardados<span class="badge" id="badge-g" hidden></span></button>
     <button type="button" data-tab="registro"><svg viewBox="0 0 24 24"><path d="M19 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z"/></svg>Registro</button>
     <button type="button" data-tab="estudio"><svg viewBox="0 0 24 24"><path d="M3.5 18.5 9.5 12.5l4 4L22 7.9 20.6 6.5l-7.1 8-4-4L2 18z"/></svg>Estudio</button>
@@ -763,6 +800,186 @@ $('#f-enlace').addEventListener('submit', async e => {
   finally { btn.disabled = false; }
 });
 
+// ------------------------------------------------------------------ analizador
+let AN = null, anItem = null;
+const AVERIAS_UI = ['pantalla', 'trasera', 'batería', 'cámara', 'puerto de carga', 'altavoz', 'botón'];
+$('#an-averias').innerHTML = AVERIAS_UI.map(a => `<label><input type="checkbox" value="${a}"> ${a}</label>`).join('');
+const RX = {};
+function rx(p) { return RX[p] || (RX[p] = new RegExp(p, 'gi')); }
+function hay(pat, t) {
+  const r = rx(pat); r.lastIndex = 0; let m;
+  const neg = new RegExp(AN.reglas.neg, 'i');
+  while ((m = r.exec(t))) { if (!neg.test(t.slice(Math.max(0, m.index - 30), m.index))) return true; if (!m[0].length) r.lastIndex++; }
+  return false;
+}
+function leerEstado(titulo, desc) {
+  const t = `${titulo}. ${desc}`, R = AN.reglas;
+  let grave = new RegExp(R.grave_literal, 'i').test(t) ? 'bloqueado o con cuenta' : null;
+  grave = grave || Object.keys(R.grave).find(k => hay(R.grave[k], t)) || null;
+  const averias = Object.keys(R.averias).filter(k => hay(R.averias[k], t)), extras = Object.keys(R.extras).filter(k => hay(R.extras[k], t));
+  return { grave, averias, extras, roto: !averias.length && !extras.length && hay(R.roto, t), sospecha: new RegExp(R.sospecha, 'i').test(t), marcas: hay(R.marcas, t) };
+}
+function batTexto(t) { const m = t.match(/(?:bater[ií]a|salud|capacidad|condici[oó]n)[^0-9%]{0,25}(\d{2,3}) ?%|(\d{2,3}) ?% ?(?:de )?(?:bater[ií]a|salud|capacidad)/i); if (!m) return null; const v = +(m[1] || m[2]); return v >= 50 && v <= 100 ? v : null; }
+const kmDe = (lat, lng) => { if (lat == null) return null; const R = 6371, r = Math.PI / 180, a = Math.sin((lat - homeLL[0]) * r / 2) ** 2 + Math.cos(homeLL[0] * r) * Math.cos(lat * r) * Math.sin((lng - homeLL[1]) * r / 2) ** 2; return Math.round(2 * R * Math.asin(Math.sqrt(a))); };
+async function wapi(url) { const r = await fetch(url, { headers: { 'X-DeviceOS': '0' } }); if (!r.ok) throw new Error(r.status === 404 ? 'El anuncio ya no existe (vendido o retirado)' : 'Wallapop respondió ' + r.status); return r.json(); }
+async function buscarId(slug) {
+  const num = slug.split('-').pop(), trozos = slug.split('-').slice(0, -1).filter(Boolean);
+  for (const [pal, orden] of [[trozos.join(' '), 'most_relevance'], [trozos.slice(0, 4).join(' '), 'most_relevance'], [trozos.join(' '), 'newest'], [trozos.slice(0, 3).join(' '), 'most_relevance']]) {
+    if (!pal) continue;
+    let url = 'https://api.wallapop.com/api/v3/search?' + new URLSearchParams({ source: 'search_box', category_id: 24200, keywords: pal.slice(0, 60), latitude: homeLL[0], longitude: homeLL[1], order_by: orden, distance_in_km: 400 });
+    for (let pg = 0; pg < 3 && url; pg++) {
+      const j = await wapi(url);
+      for (const it of j?.data?.section?.payload?.items || []) {
+        const fotos = (it.images || []).map(i => i.urls?.small || '').join(' ');
+        if (it.web_slug === slug || (/^\d+$/.test(num) && fotos.includes(`p${num}/`))) return it;
+      }
+      const nx = j?.meta?.next_page; url = nx ? 'https://api.wallapop.com/api/v3/search?next_page=' + encodeURIComponent(nx) : null;
+    }
+  }
+  return null;
+}
+function modeloDe(texto, attr) {
+  const nombres = Object.keys(AN.precios);
+  if (attr && AN.precios[attr]) return attr;
+  const t = ' ' + texto.toLowerCase().replace(/\s+/g, ' ') + ' ';
+  return nombres.filter(n => t.includes(' ' + n.toLowerCase() + ' ') || t.includes(' ' + n.toLowerCase())).sort((a, b) => b.length - a.length)[0] || attr || '';
+}
+function opcionesCap(modelo, sel) {
+  const caps = Object.keys(AN?.precios?.[modelo]?.caps || {}).filter(c => c !== '*');
+  const lista = [...new Set([...caps, ...(sel && sel !== '*' ? [sel] : [])])];
+  $('#an-cap').innerHTML = `<option value="*">No sé / cualquiera</option>` + lista.map(c => `<option ${c === sel ? 'selected' : ''}>${esc(c)}</option>`).join('');
+}
+$('#f-analizar').addEventListener('submit', async e => {
+  e.preventDefault();
+  const url = $('#an-url').value.trim();
+  if (!url) { calcularAnalisis(); return; }
+  const slug = (url.match(/\/item\/([a-z0-9-]+)/i) || [])[1];
+  if (!slug) { toast('Pega el enlace de un anuncio de Wallapop (wallapop.com/item/…)', true); return; }
+  if (!AN) { toast('Aún no hay datos de precios: espera a la próxima pasada del bot', true); return; }
+  const btn = e.submitter; btn.disabled = true; $('#an-res').innerHTML = '<div class="empty">Buscando el anuncio en Wallapop…</div>';
+  try {
+    const it = await buscarId(slug.toLowerCase());
+    if (!it) throw new Error('No encuentro ese anuncio. Puede que lo hayan quitado o que esté reservado.');
+    const det = await wapi('https://api.wallapop.com/api/v3/items/' + it.id);
+    const txt = v => typeof v === 'object' && v ? v.original || '' : v || '';
+    const titulo = txt(det.title) || it.title, desc = txt(det.description) || it.description || '';
+    const ta = det.type_attributes || {};
+    const est = leerEstado(titulo, desc);
+    anItem = {
+      id: it.id, titulo, desc, url: 'https://es.wallapop.com/item/' + (det.slug || it.web_slug), foto: (det.images || it.images || [])[0]?.urls?.medium,
+      zona: det.location?.city, lat: det.location?.latitude, lng: det.location?.longitude, km: kmDe(det.location?.latitude, det.location?.longitude),
+      condicion: ta.condition?.text, cont: det.counters || {}, publicado: it.created_at, vendido: !!(det.sold && det.sold.flag), reservado: !!(det.reserved && det.reserved.flag),
+      tienda: !!(det.user?.is_top_profile && det.user.is_top_profile.flag), est,
+    };
+    const modelo = modeloDe(titulo, ta.model?.text);
+    $('#an-modelo').value = modelo;
+    $('#an-precio').value = det.price?.cash?.amount ?? it.price?.amount ?? '';
+    const cap = ta.storage_capacity?.text || (titulo + ' ' + desc).match(/\b(64|128|256|512) ?gb\b|\b1 ?tb\b/i)?.[0]?.toUpperCase().replace(/(\d)(GB|TB)/, '$1 $2');
+    opcionesCap(modelo, cap || '*');
+    const bat = batTexto(`${titulo} ${desc}`);
+    $('#an-bat').value = bat ?? '';
+    $$('#an-averias input').forEach(c => c.checked = est.averias.includes(c.value) || est.extras.includes(c.value) || (c.value === 'batería' && bat != null && bat < 80));
+    $('#an-marcas').checked = est.marcas; $('#an-caja').checked = /\bcaja\b|factura/i.test(desc);
+    calcularAnalisis();
+  } catch (err) { $('#an-res').innerHTML = `<div class="empty"><b>${esc(err.message)}</b></div>`; anItem = null; }
+  finally { btn.disabled = false; }
+});
+['#an-modelo', '#an-precio', '#an-cap', '#an-bat', '#an-marcas', '#an-caja'].forEach(q => $(q).addEventListener('input', () => { if (q === '#an-modelo') opcionesCap($('#an-modelo').value.trim(), $('#an-cap').value); if (q === '#an-bat') { const b = num($('#an-bat').value); const c = $$('#an-averias input').find(x => x.value === 'batería'); if (b != null) c.checked = b < 80; } calcularAnalisis(); }));
+$('#an-averias').addEventListener('change', calcularAnalisis);
+const r5 = x => Math.round(x / 5) * 5;
+function calcularAnalisis() {
+  if (!AN) { $('#an-res').innerHTML = '<div class="empty">Aún no hay datos de precios: espera a la próxima pasada del bot.</div>'; return; }
+  const modelo = $('#an-modelo').value.trim(), precio = num($('#an-precio').value), bat = num($('#an-bat').value);
+  const P = AN.precios[modelo];
+  if (!modelo || precio == null) { $('#an-res').innerHTML = anItem ? '' : ''; return; }
+  if (!P) { $('#an-res').innerHTML = `<div class="empty"><b>No tengo precios del ${esc(modelo)}.</b><br>Hacen falta al menos 6 anuncios del modelo para calcular. Prueba con el nombre exacto (ej.: «iPhone 13 Pro»).</div>`; return; }
+  const capSel = $('#an-cap').value, pr = P.caps[capSel] || P.caps['*'];
+  const marcados = $$('#an-averias input:checked').map(c => c.value);
+  const averias = marcados.filter(a => ['pantalla', 'trasera', 'batería'].includes(a)), extras = marcados.filter(a => !['pantalla', 'trasera', 'batería'].includes(a));
+  const familia = /iphone/i.test(modelo) ? 'iphone' : 'android';
+  const rep = marcados.length > 0, tipo = rep ? 'reparar' : 'listo';
+  const [pPant, pBat, pTras, tTras] = AN.piezas[modelo] || AN.piezas_defecto;
+  const piezas = { pantalla: pPant, 'batería': pBat, trasera: pTras, ...AN.extras };
+  let coste = 0; const detalle = [];
+  marcados.forEach(a => { coste += piezas[a] || 0; detalle.push(`${a === 'trasera' && tTras === 'laser' ? 'trasera (taller con láser)' : a} ~${piezas[a]} €`); });
+  const F = AN.factores, tb = averias.includes('batería') ? '90+' : bat == null ? '?' : bat >= 90 ? '90+' : bat >= 85 ? '85-89' : bat >= 80 ? '80-84' : '<80';
+  let f = F.bat[tb]; if ($('#an-marcas').checked && !averias.includes('pantalla') && !averias.includes('trasera')) f *= F.marcas; if ($('#an-caja').checked) f *= F.caja;
+  const k = pr.k * f * (AN.ajuste || 1);
+  const venta = pr.media * k, baja = pr.baja * k, alta = pr.alta * k;
+  const fijo = AN.coste_fijo[tipo], objetivo = AN.beneficio_min[`${familia}_${tipo}`];
+  const maxp = venta - coste - fijo - objetivo, bueno = r5(baja - coste - fijo - objetivo), limite = r5(venta - coste - fijo);
+  const oferta = Math.max(0, Math.min(r5(precio * (rep ? 0.80 : 0.88)), r5(maxp)));
+  const ratio = pr.ref ? precio / pr.ref : 1;
+  const est = anItem?.est || {};
+  const riesgo = est.sospecha || (!rep && ratio < 0.70) ? 'alto' : (!rep && ratio < 0.80) || (rep && ratio < 0.30) ? 'medio' : 'bajo';
+  const benPedido = venta - precio - coste - fijo, benOferta = venta - oferta - coste - fijo;
+  const veces = benOferta / Math.max(objetivo, 1);
+  const categoria = riesgo === 'alto' ? 'trampa' : veces >= 2.5 ? 'chollazo' : veces >= 1.6 ? 'bueno' : 'normal';
+  let v;
+  if (est.grave) v = ['no', `❌ No lo compres: ${est.grave}`, 'El anuncio dice algo que normalmente hace que no compense (o que sea imposible venderlo).'];
+  else if (marcados.length >= 3) v = ['no', '❌ Demasiadas cosas rotas', 'Con 3 o más averías la reparación suele salir cara y arriesgada.'];
+  else if (anItem?.vendido) v = ['no', '❌ Ya está vendido', ''];
+  else if (precio <= bueno) v = ['si', '✅ Cómpralo: está en buen precio', `Ganas ~${Math.round(benPedido)} € a precio normal y ~${Math.round(baja - precio - coste - fijo)} € aunque lo vendas barato. ${riesgo !== 'bajo' ? 'Está muy por debajo de mercado: comprueba bien que no sea trampa.' : ''}`];
+  else if (precio <= maxp) v = ['ok', '👍 Compensa a lo que piden', `Ganarías ~${Math.round(benPedido)} € vendiéndolo a precio normal. Intenta bajarlo hacia ${bueno} €.`];
+  else if (precio <= limite) v = ['justo', `🤏 Solo si lo bajas a ${r5(maxp)} € o menos`, `A lo que piden ganarías solo ~${Math.round(benPedido)} €.`];
+  else v = ['no', '❌ Caro: perderías dinero', `Por encima de ${limite} € no sacas beneficio. Se vende por ~${Math.round(venta)} €.`];
+  const g = gasolina(anItem?.km);
+  const pregs = [];
+  if (riesgo !== 'bajo') pregs.push('¿Por qué lo vendes tan barato? ¿Tienes la factura a tu nombre?', '¿Está pagado del todo y comprado en España?');
+  if (marcados.includes('pantalla')) pregs.push('¿El táctil responde en toda la pantalla? ¿Se ven manchas o líneas?');
+  if (bat == null) pregs.push('¿Qué salud tiene la batería?' + (familia === 'iphone' ? ' (Ajustes › Batería › Estado)' : ''));
+  pregs.push(familia === 'iphone' ? '¿Funciona el Face ID?' : '¿Funciona la huella?', '¿Se ha abierto o reparado alguna vez?', '¿Has quitado tu cuenta de ' + (familia === 'iphone' ? 'iCloud' : 'Google') + '? ¿Es libre de operador?');
+  const argumento = bat != null && bat < 85 ? ` La batería está al ${bat} %, habría que cambiarla.` : marcados.length ? ` Hay que repararle ${marcados.join(' y ')}.` : '';
+  const mensaje = `Hola, me interesa el ${modelo}. ¿Sigue disponible?${argumento} Te ofrezco ${oferta} € y lo recojo en mano cuando te venga bien.`;
+  const ficha = { id: anItem?.id || 'manual-' + Date.now(), familia, tipo, nivel: rep ? (marcados.includes('pantalla') ? 'media' : 'leve') : null, modelo, capacidad: capSel !== '*' ? capSel : '',
+    precio, oferta, max: r5(maxp), venta: Math.round(venta), beneficio: Math.round(benOferta), reparacion: detalle, zona: anItem?.zona, km: anItem?.km, lat: anItem?.lat, lng: anItem?.lng,
+    url: anItem?.url || '', foto: anItem?.foto, bateria: bat, resumen: [rep ? 'Para reparar: ' + marcados.join(', ') : 'Sin daños', bat ? `batería ${bat} %` : '', anItem?.condicion ? 'Wallapop dice: ' + anItem.condicion.toLowerCase() : ''].filter(Boolean).join(' · '),
+    preguntas: pregs.slice(0, 6), regateo: `Ofrece ${oferta} € y cierra en ${bueno} € o menos si puedes. No pases de ${r5(maxp)} €; por encima de ${limite} € pierdes dinero.`, mensaje,
+    precio_bueno: bueno, limite, venta_rango: [Math.round(baja), Math.round(alta)], fiabilidad: pr.fiab, fuente_venta: pr.fuente, factor_estado: Math.round(f * 1000) / 1000,
+    categoria, riesgo, pct_mercado: Math.round(ratio * 100), dias_venta: P.dias, avisado_ms: null, estado: 'activo' };
+  window.__ficha = ficha;
+  const info = anItem ? `<div class="chips" style="margin:10px 14px 0 18px">
+      ${anItem.cont.views != null ? `<span class="chip">👀 ${anItem.cont.views}</span><span class="chip">❤️ ${anItem.cont.favorites}</span><span class="chip">💬 <b>${anItem.cont.conversations}</b> chats</span>` : ''}
+      ${anItem.publicado ? `<span class="chip">🕒 publicado ${esc(hace(anItem.publicado))}</span>` : ''}
+      ${anItem.reservado ? '<span class="chip">⏸️ reservado</span>' : ''}${anItem.tienda ? '<span class="chip">🏪 perfil destacado/tienda</span>' : ''}</div>` : '';
+  $('#an-res').innerHTML = `<article class="card ${categoria}">
+    <div class="top"><span class="tag">${CAT_TXT[categoria]}</span><span class="kind">${familia === 'iphone' ? ICO.apple : ICO.android}${rep ? 'Para reparar' : 'Listo para vender'}</span></div>
+    <div class="head">${ficha.foto ? `<img class="foto" src="${esc(ficha.foto)}" alt="" referrerpolicy="no-referrer" onerror="this.remove()">` : ''}<div class="txt">
+      <span class="model">${esc(modelo)}${ficha.capacidad ? ' · ' + esc(ficha.capacidad) : ''}</span>
+      <span class="where">${anItem ? esc(anItem.titulo) : 'Cálculo a mano'}${anItem?.zona ? ` · ${esc(anItem.zona)}${anItem.km != null ? ` · <b>~${anItem.km} km</b>` : ''}` : ''}</span></div></div>
+    <div class="veredicto ${v[0]}">${v[1]}<small>${esc(v[2])}</small></div>
+    ${info}
+    <div class="nums"><div><span>Piden</span><b>${eur(precio)}</b></div><div class="neg"><span>Ofrece</span><b>${eur(oferta)}</b></div><div><span>Se vende</span><b>~${eur(venta)}</b></div>
+      <div class="${benPedido >= 0 ? 'gan' : 'per'}"><span>Ganas</span><b>${signo(benPedido)}</b></div></div>
+    <div class="niveles">${bueno < r5(maxp) ? `<div class="v"><span>🟢 Buena</span><b>≤ ${eur(bueno)}</b></div>` : ''}<div class="a"><span>🟡 Máximo</span><b>${eur(r5(maxp))}</b></div><div class="r"><span>🔴 Tope</span><b>${eur(limite)}</b></div></div>
+    <div class="body">
+      ${riesgo === 'alto' ? `<div class="risk"><b>¿Trampa? ${est.sospecha ? 'Pide envío o pago por adelantado.' : `Está al ${Math.round(ratio * 100)} % de su precio normal.`}</b> Pide factura y foto del IMEI antes de quedar. Nunca pagues por adelantado.</div>` : riesgo === 'medio' ? `<div class="risk medio"><b>Por debajo de mercado (${Math.round(ratio * 100)} %).</b> Pide factura y comprueba el IMEI.</div>` : ''}
+      <div class="chips">${g ? `<span class="chip">⛽ <b>${eur2(g.euros)}</b> ida y vuelta</span>` : ''}${P.dias != null ? `<span class="chip">⏱️ se vende en <b>~${String(P.dias).replace('.', ',')} días</b></span>` : ''}${f !== 1 ? `<span class="chip">Estado: <b>${f > 1 ? '+' : ''}${Math.round((f - 1) * 100)} %</b> sobre el precio normal</span>` : ''}</div>
+      <div><b>Se vende entre ${eur(baja)} y ${eur(alta)}</b> <span class="fiab ${pr.fiab}">fiabilidad ${pr.fiab}</span><br><span style="color:var(--faint);font-size:12.5px">Según ${esc(pr.fuente)}${capSel === '*' || !P.caps[capSel] ? ' (todas las capacidades)' : ''}.</span></div>
+      ${detalle.length ? `<div><b>Reparación:</b> ${esc(detalle.join(', '))} · total ~${eur(coste)}</div>` : ''}
+      <details open><summary>Qué preguntar</summary><ul>${pregs.slice(0, 6).map(q => `<li>${esc(q)}</li>`).join('')}</ul></details>
+      <details open><summary>Cómo regatear</summary><p>${esc(ficha.regateo)}</p><div class="msg">${esc(mensaje)}</div><p><button type="button" class="btn" data-copiar="${esc(mensaje)}">Copiar mensaje</button></p></details>
+      <div class="actions">
+        ${anItem ? `<a class="btn main" href="${esc(anItem.url)}" target="_blank" rel="noopener">Abrir en Wallapop</a>` : ''}
+        ${anItem ? `<button type="button" class="btn star" id="an-guardar">☆ Guardar y avisar</button>` : ''}
+        ${anItem?.lat != null ? `<a class="btn" href="${maps(anItem)}" target="_blank" rel="noopener">Cómo llegar</a>` : ''}
+        <button type="button" class="btn" id="an-comprar">🛒 Lo hemos comprado</button>
+      </div>
+    </div></article>`;
+  $('#an-guardar') && ($('#an-guardar').onclick = async ev => {
+    const b = ev.target; b.disabled = true;
+    try {
+      guardados = await cambiar('guardados.json', { items: {} }, j => { j.items = j.items || {}; j.items[ficha.id] = { ...ficha, wid: ficha.id, por: AJ.nombre || 'Alguien', ms: Date.now(), nota: '' }; return j; }, `Guardar ${modelo}${AJ.nombre ? ' (' + AJ.nombre + ')' : ''}`);
+      b.textContent = '★ Guardado'; b.classList.add('on'); toast('⭐ Guardado. Le llegará un aviso a tu compañero.'); renderGuardados();
+    } catch (err) { if (err.message !== 'sin clave') toast(err.message, true); } finally { b.disabled = false; }
+  });
+  $('#an-comprar').onclick = () => {
+    abrirCompra.pre = { wid: anItem?.id || null, venta_estimada: Math.round(venta) };
+    abrirCompra(null, { modelo, capacidad: ficha.capacidad, bateria: bat ?? '', estado: tipo, precio_compra: oferta, gasolina: g ? Math.round(g.euros * 10) / 10 : '', url: anItem?.url || '',
+      reparaciones: marcados.map(a => ({ pieza: a, coste: piezas[a] })) });
+  };
+}
+
 // ------------------------------------------------------------------ registro
 const coste = c => (num(c.precio_compra) || 0) + (c.reparaciones || []).reduce((s, r) => s + (num(r.coste) || 0), 0) + (num(c.gasolina) || 0) + (num(c.otros) || 0);
 const vendida = c => num(c.precio_venta) != null;
@@ -1057,7 +1274,7 @@ function irA(tab, sinScroll) {
   if (tab === 'mapa' && map) setTimeout(() => map.invalidateSize(), 50);
   if (!sinScroll) scrollTo({ top: 0 });
   if (tab !== 'mapa' && location.hash.slice(1) !== tab) history.replaceState(null, '', '#' + tab);
-  if (tab === 'mapa' && ['guardados', 'registro', 'estudio', 'gasolina'].includes(location.hash.slice(1))) history.replaceState(null, '', location.pathname);
+  if (tab === 'mapa' && ['analizar', 'guardados', 'registro', 'estudio', 'gasolina'].includes(location.hash.slice(1))) history.replaceState(null, '', location.pathname);
 }
 $$('[data-tab]').forEach(b => b.onclick = () => irA(b.dataset.tab));
 function syncControls() {
@@ -1105,7 +1322,7 @@ document.addEventListener('click', async e => {
 window.addEventListener('hashchange', () => abrirHash());
 function abrirHash() {
   const h = decodeURIComponent(location.hash.slice(1));
-  if (['guardados', 'registro', 'estudio', 'gasolina', 'mapa'].includes(h)) irA(h);
+  if (['analizar', 'guardados', 'registro', 'estudio', 'gasolina', 'mapa'].includes(h)) irA(h);
   else if (h && data.chollos.some(c => c.id === h)) select(h);
 }
 
@@ -1138,7 +1355,8 @@ function renderTodo(que = ['mapa', 'guard', 'reg', 'est', 'gas']) {
   if (que.includes('gas')) renderGasolina();
 }
 async function recargar(first) {
-  const [d, e, i] = await Promise.all([pages('chollos.json', null), pages('estudio.json', {}), pages('guardados_info.json', {}), cargarPropios()]);
+  const [d, e, i, an] = await Promise.all([pages('chollos.json', null), pages('estudio.json', {}), pages('guardados_info.json', {}), pages('analizador.json', null), cargarPropios()]);
+  if (an) AN = an;
   if (!d) { $('#updated').textContent = 'No se pudieron cargar los datos'; return; }
   data = d; estudio = e || {}; info = i || {};
   if (data.origen) { homeLL = [data.origen.lat, data.origen.lng]; $$('.orig').forEach(x => x.textContent = data.origen.nombre); }
@@ -1161,7 +1379,7 @@ layer = L.layerGroup().addTo(map);
 $('#lg-1').innerHTML = ICO.apple + '420'; $('#lg-2').innerHTML = ICO.apple + '310'; $('#lg-3').innerHTML = ICO.android + '180';
 $('#lg-4').innerHTML = ICO.apple + '150 ?'; $('#lg-5').innerHTML = ICO.apple + '90 ' + ICO.reparar;
 syncControls();
-irA(['guardados', 'registro', 'estudio', 'gasolina'].includes(location.hash.slice(1)) ? location.hash.slice(1) : (location.hash.length > 1 ? 'mapa' : S.tab), true);
+irA(['analizar', 'guardados', 'registro', 'estudio', 'gasolina'].includes(location.hash.slice(1)) ? location.hash.slice(1) : (location.hash.length > 1 ? 'mapa' : S.tab), true);
 recargar(true);
 setInterval(() => { if (!document.querySelector('dialog[open]')) recargar(); }, 5 * 60 * 1000);
 </script>

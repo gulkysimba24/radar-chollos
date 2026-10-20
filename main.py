@@ -682,6 +682,50 @@ def barrer(seguidos, precios, vistos_items, vistos, activos, vigilar):
     return nuevos, añadidos
 
 
+def exportar_analizador(precios):
+    """analizador.json: reglas y precios para que la web analice un anuncio al momento, sin esperar al bot."""
+    tabla = {}
+    for nombre, lista in precios.items():
+        caps = sorted({x[3] for x in lista if x[3]}, key=lambda c: (len(c), c))
+        d = {}
+        for cap in [None] + caps:
+            r = mercado.rango(VENTAS, nombre, cap)
+            ref = referencia(precios, nombre, cap)
+            if r and (cap is None or r['cap'] == cap):
+                e = {'baja': r['baja'], 'media': r['media'], 'alta': r['alta'], 'n': r['n'], 'fiab': r['fiab'], 'k': 0.97,
+                     'fuente': f"{r['n']} ventas reales"}
+            else:
+                q = pedidos(precios, nombre, cap)
+                if not q or (cap and len([x for x in lista if x[3] == cap]) < 6):
+                    continue
+                e = {'baja': q[0], 'media': q[1], 'alta': q[2], 'n': q[3], 'fiab': 'baja', 'k': config.VENTA_FACTOR,
+                     'fuente': f'{q[3]} anuncios a la venta, aún sin ventas reales'}
+            e = {k: (round(v, 1) if isinstance(v, float) else v) for k, v in e.items()}
+            e['ref'] = round(ref, 1) if ref else None
+            d[cap or '*'] = e
+        if d:
+            dv, nd = mercado.dias_venta(VENTAS, nombre)
+            tabla[nombre] = {'caps': d, 'dias': dv, 'dias_n': nd}
+    piezas = {f'iPhone {k}': v for k, v in config.IPHONE_PIEZAS.items()}
+    R = analisis
+    datos = {
+        'precios': tabla, 'piezas': piezas, 'piezas_defecto': config.IPHONE_POR_DEFECTO, 'extras': config.EXTRAS,
+        'factores': mercado.F, 'ajuste': getattr(config, 'AJUSTE_VENTA', 1.0),
+        'beneficio_min': {f'{k[0]}_{k[1]}': v for k, v in config.BENEFICIO_MIN.items()},
+        'coste_fijo': config.COSTE_FIJO, 'precio_max': config.PRECIO_MAX,
+        'reglas': {
+            'grave': {k: rx.pattern for k, rx in R._GRAVE.items()}, 'grave_literal': R._GRAVE_LITERAL.pattern,
+            'sospecha': R._SOSPECHA.pattern, 'averias': {k: rx.pattern for k, rx in R._AVERIAS.items()},
+            'extras': {k: rx.pattern for k, rx in R._EXTRAS.items()}, 'roto': R._ROTO_GENERICO.pattern,
+            'marcas': R._MARCAS.pattern, 'neg': R._NEG.pattern,
+        },
+    }
+    viejo = cargar('analizador.json', {})
+    if {k: v for k, v in viejo.items() if k != 'actualizado_ms'} != json.loads(json.dumps(datos, ensure_ascii=False)):
+        datos['actualizado_ms'] = ahora_ms()
+        guardar('analizador.json', datos)
+
+
 def ejecutar():
     global VENTAS
     precios = cargar('precios.json', {})
@@ -748,6 +792,7 @@ def ejecutar():
         guardar(nombre, datos)
     exportar(activos)
     aprender_y_estudiar(precios, seguidos, registro, condicion)
+    exportar_analizador(precios)
     resumen_diario(activos, VENTAS, registro, est, temas)
     print(f'{len(vistos_items)} anuncios revisados · {len(nuevos)} nuevos de modelos que tratamos · '
           f'{avisados} avisos · {bajadas} bajadas de precio · {len(vigilar)} vigilados · '

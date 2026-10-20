@@ -10,8 +10,9 @@ TEMAS = {
     'iphone_reparar': '🔧 iPhone · Para reparar',
     'android_listo': '🤖 Android · Listos para vender',
     'android_reparar': '🛠️ Android · Para reparar',
+    'equipo': '⭐ Guardados, compras y resumen',
 }
-COLOR_TEMA = {'iphone_listo': 7322096, 'iphone_reparar': 16766590, 'android_listo': 9367192, 'android_reparar': 16749490}
+COLOR_TEMA = {'iphone_listo': 7322096, 'iphone_reparar': 16766590, 'android_listo': 9367192, 'android_reparar': 16749490, 'equipo': 16478047}
 
 
 def activo():
@@ -54,29 +55,37 @@ def preparar_temas(temas_guardados):
     return temas_guardados
 
 
-def enviar(texto, tema=None, botones=None, silencioso=False):
+def _vista(foto):
+    """Foto del anuncio encima del texto (vista previa grande). Sin foto, sin vista previa."""
+    if foto:
+        return {'link_preview_options': {'url': foto, 'prefer_large_media': True, 'show_above_text': True}}
+    return {'link_preview_options': {'is_disabled': True}}
+
+
+def enviar(texto, tema=None, botones=None, silencioso=False, foto=None):
     """Manda el aviso. Devuelve el message_id o None. Sin token, lo imprime (modo prueba)."""
     if not activo():
+        if foto:
+            print('[foto] ' + foto)
         print(texto)
         if botones:
             print('   [' + '] ['.join(b['text'] + ' → ' + b['url'] for fila in botones for b in fila) + ']')
         print('-' * 50)
         return 0
     r = _api('sendMessage', chat_id=os.environ['TELEGRAM_CHAT_ID'], text=texto, parse_mode='HTML',
-             message_thread_id=tema, disable_web_page_preview='true', disable_notification='true' if silencioso else None,
-             reply_markup={'inline_keyboard': botones} if botones else None)
+             message_thread_id=tema, disable_notification='true' if silencioso else None,
+             reply_markup={'inline_keyboard': botones} if botones else None, **_vista(foto))
     if r.get('ok'):
         return r['result']['message_id']
     print(f'error enviando a Telegram: {r.get("description")}', file=sys.stderr)
     return None
 
 
-def editar(message_id, texto, botones=None):
+def editar(message_id, texto, botones=None, foto=None):
     if not activo() or not message_id:
         return
     _api('editMessageText', chat_id=os.environ['TELEGRAM_CHAT_ID'], message_id=message_id, text=texto,
-         parse_mode='HTML', disable_web_page_preview='true',
-         reply_markup={'inline_keyboard': botones} if botones else None)
+         parse_mode='HTML', reply_markup={'inline_keyboard': botones} if botones else None, **_vista(foto))
 
 
 def responder(message_id, texto, tema=None):
@@ -84,4 +93,5 @@ def responder(message_id, texto, tema=None):
         print('↳ ' + texto)
         return
     _api('sendMessage', chat_id=os.environ['TELEGRAM_CHAT_ID'], text=texto, parse_mode='HTML',
-         message_thread_id=tema, reply_parameters={'message_id': message_id, 'allow_sending_without_reply': True})
+         message_thread_id=tema, reply_parameters={'message_id': message_id, 'allow_sending_without_reply': True},
+         **_vista(None))

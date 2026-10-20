@@ -158,28 +158,41 @@ def km(lat, lng):
     return round(2 * 6371 * math.asin(math.sqrt(a)))
 
 
-def costes(familia, nombre, gama, est):
-    """Coste de reparación (pieza+material) y nivel: 'leve' o 'media'. None si no se arregla barato."""
+def coste_piezas(familia, nombre, gama):
+    """Coste de cada pieza para este modelo: el real si lo habéis apuntado en el registro, si no el de la tabla."""
     if familia == 'iphone':
-        clave = nombre.replace('iPhone ', '')
-        pantalla, bat, trasera, tipo_tras = config.IPHONE_PIEZAS.get(clave, config.IPHONE_POR_DEFECTO)
+        pantalla, bat, trasera, tipo_tras = config.IPHONE_PIEZAS.get(nombre.replace('iPhone ', ''), config.IPHONE_POR_DEFECTO)
     else:
         pantalla, bat, trasera = config.ANDROID_PIEZAS.get(gama, (90, 20, 15))
         tipo_tras = 'tapa'
+    piezas = {'pantalla': pantalla, 'batería': bat, 'trasera': trasera, **config.EXTRAS}
+    reales = getattr(config, 'COSTES_REALES', {})
+    for k in piezas:
+        if (nombre, k) in reales:
+            piezas[k] = reales[(nombre, k)]
+    return piezas, tipo_tras
+
+
+def costes(familia, nombre, gama, est):
+    """Coste de reparación (pieza+material) y nivel: 'leve' o 'media'. None si no se arregla barato."""
+    piezas, tipo_tras = coste_piezas(familia, nombre, gama)
+    reales = getattr(config, 'COSTES_REALES', {})
     total, nivel, detalle = 0, 'leve', []
     for a in est['averias']:
+        c = piezas[a]
+        real = ' (vuestro coste)' if (nombre, a) in reales else ''
+        total += c
         if a == 'pantalla':
-            total += pantalla; nivel = 'media'; detalle.append(f'pantalla ~{pantalla} €')
+            nivel = 'media'; detalle.append(f'pantalla ~{c} €{real}')
         elif a == 'batería':
-            total += bat; detalle.append(f'batería ~{bat} €')
+            detalle.append(f'batería ~{c} €{real}')
         elif a == 'trasera':
-            total += trasera
             if tipo_tras == 'laser':
-                nivel = 'media'; detalle.append(f'trasera en taller con láser ~{trasera} €')
+                nivel = 'media'; detalle.append(f'trasera en taller con láser ~{c} €{real}')
             else:
-                detalle.append(f'{"carcasa" if tipo_tras == "carcasa" else "tapa trasera"} ~{trasera} €')
+                detalle.append(f'{"carcasa" if tipo_tras == "carcasa" else "tapa trasera"} ~{c} €{real}')
     for e in est['extras']:
-        c = config.EXTRAS[e]
+        c = piezas[e]
         total += c
         if e == 'cámara':
             nivel = 'media'
@@ -213,7 +226,9 @@ def evaluar(anuncio, ref):
     else:
         coste, nivel, detalle = 0, None, []
         # los demasiado baratos ya no se quitan: salen marcados como posible trampa
-    venta = ref * config.VENTA_FACTOR
+    # precio de venta: el real de las ventas vistas si hay bastantes, si no la mediana de anuncios con descuento;
+    # y corregido con lo que vosotros vendéis de verdad (registro de la web)
+    venta = (anuncio.get('venta_real') or ref * config.VENTA_FACTOR) * getattr(config, 'AJUSTE_VENTA', 1.0)
     fijo = config.COSTE_FIJO[tipo]
     objetivo = config.BENEFICIO_MIN[(fam, tipo)]
     maxp = venta - coste - fijo - objetivo
@@ -239,6 +254,7 @@ def evaluar(anuncio, ref):
     return veredicto, {
         'riesgo': riesgo, 'pct_mercado': round(ratio_mercado * 100), 'categoria': nivel_chollo,
         'motivo_trampa': (est.get('sospecha') or f'está al {round(ratio_mercado * 100)} % de su precio normal') if riesgo == 'alto' else None,
+        'fuente_venta': anuncio.get('fuente_venta'),
         'tipo': tipo, 'nivel': nivel, 'reparacion': detalle, 'coste_reparacion': round(coste),
         'ref_mercado': round(ref), 'venta': round(venta), 'max_pagar': _r5(maxp) if maxp >= 10 else round(maxp),
         'oferta': oferta,

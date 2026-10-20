@@ -38,6 +38,10 @@ DIAS_ACTIVO = 5
 # pantalla: OLED "sin mensaje"/soft OLED (LCD en XR/11/SE). trasera: carcasa o tapa;
 # 'laser' = el cristal va pegado y hay que ir a taller (precio de taller).
 # Precios orientativos de tiendas de repuestos españolas, octubre 2026.
+# Precios de pieza (IVA incluido) en tiendas para reparadores como 5G-M o en AliExpress/Amazon:
+# pantalla = soft OLED o incell de buena calidad, batería compatible, trasera = cristal o tapa.
+# iFixit vende lo mismo con garantía y herramientas pero ~2 veces más caro.
+# Cuando apuntéis reparaciones reales en el registro de la web, el bot usa vuestros costes en vez de estos.
 IPHONE_PIEZAS = {
     #             pantalla bateria trasera  trasera_tipo
     'SE':        (25, 18, 25, 'carcasa'),
@@ -90,3 +94,18 @@ EXTRAS = {
     'altavoz': 12,
     'botón': 10,
 }
+
+# ---------------------------------------------------------------- memoria del mercado
+# El bot sigue los anuncios que ve (aunque no sean chollos) y apunta cuándo desaparecen
+# para saber a qué precio se venden de verdad y cuántos días tardan.
+MERCADO_MAX_SEGUIDOS = 5000     # anuncios de iPhone seguidos a la vez
+MERCADO_REVISAR_POR_VEZ = 150   # cuántos comprueba en cada pasada (cada uno se mira cada pocas horas)
+MERCADO_DIAS_SEGUIR = 30        # si sigue a la venta tras estos días, se apunta como "no vendido"
+MERCADO_DIAS_ESTUDIO = 120      # ventana del estudio de mercado
+MERCADO_MIN_VENTAS = 5          # ventas vistas necesarias para fiarse del precio real de venta
+
+# Lo que aprende de vuestras ventas reales (registro de la web)
+APRENDER_MIN_VENTAS = 3         # ventas vuestras necesarias para ajustar el precio de venta
+
+# Resumen diario en Telegram (hora de Madrid)
+RESUMEN_HORA = 21

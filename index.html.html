@@ -1,0 +1,1122 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0A0D12">
+<meta name="color-scheme" content="dark">
+<title>Radar de chollos</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@700;800&family=Figtree:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<style>
+:root {
+  --bg: #0A0D12; --surface: #121821; --surface2: #18202B; --line: #243040; --line2: #2E3B4D;
+  --ink: #E9EEF4; --muted: #92A0B0; --faint: #64727F;
+  --chollazo: #FF4655; --chollazo-glow: rgba(255, 70, 85, .55);
+  --bueno: #23C38A; --normal: #4C8DF0; --trampa: #B184FF; --ofrece: #F5A524; --off: #5B6673; --estrella: #FFC94A;
+  --r: 14px; --nav: 64px;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; background: var(--bg); color: var(--ink); }
+body { font: 15px/1.45 Figtree, system-ui, -apple-system, "Segoe UI", sans-serif; -webkit-font-smoothing: antialiased; padding-bottom: calc(var(--nav) + env(safe-area-inset-bottom)); }
+button, select, input, textarea { font: inherit; color: inherit; }
+a { color: inherit; }
+[hidden] { display: none !important; }
+.wrap { max-width: 1240px; margin: 0 auto; padding: 14px 16px 30px; }
+.cond { font-family: "Barlow Condensed", Figtree, sans-serif; font-weight: 800; }
+
+header { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
+h1 { margin: 0; font: 800 28px/1 "Barlow Condensed", Figtree, sans-serif; letter-spacing: .5px; text-transform: uppercase; }
+h1 .dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: var(--chollazo); margin: 0 8px 4px 0; vertical-align: middle; animation: latido 2s infinite; }
+h2 { font: 800 24px/1.1 "Barlow Condensed", sans-serif; text-transform: uppercase; letter-spacing: .4px; margin: 4px 0 10px; }
+h3 { font-size: 16px; margin: 18px 0 8px; }
+.updated { color: var(--muted); font-size: 12.5px; display: block; margin-top: 4px; }
+.icon-btn { width: 42px; height: 42px; border-radius: 12px; border: 1px solid var(--line); background: var(--surface); display: grid; place-items: center; cursor: pointer; flex: none; }
+.icon-btn svg { width: 20px; height: 20px; fill: var(--muted); }
+.sub { color: var(--muted); font-size: 13.5px; margin: -4px 0 12px; }
+
+/* navegación inferior */
+nav.tabs { position: fixed; z-index: 1000; left: 0; right: 0; bottom: 0; height: calc(var(--nav) + env(safe-area-inset-bottom)); padding-bottom: env(safe-area-inset-bottom); background: rgba(14, 18, 25, .96); backdrop-filter: blur(8px); border-top: 1px solid var(--line); display: flex; justify-content: center; }
+nav.tabs .in { display: grid; grid-template-columns: repeat(5, 1fr); width: 100%; max-width: 640px; }
+nav.tabs button { border: 0; background: none; color: var(--faint); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; font-size: 11.5px; font-weight: 700; cursor: pointer; position: relative; }
+nav.tabs svg { width: 22px; height: 22px; fill: currentColor; }
+nav.tabs button[aria-current="page"] { color: var(--ink); }
+nav.tabs button[aria-current="page"]::before { content: ""; position: absolute; top: 0; left: 28%; right: 28%; height: 3px; border-radius: 0 0 3px 3px; background: var(--chollazo); }
+nav.tabs .badge { position: absolute; top: 7px; left: calc(50% + 6px); min-width: 17px; height: 17px; padding: 0 4px; border-radius: 9px; background: var(--estrella); color: #241a00; font-size: 10.5px; line-height: 17px; }
+
+/* contadores = filtros por nivel */
+.tiles { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 10px; }
+.tile { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 9px 10px 8px; text-align: left; position: relative; overflow: hidden; }
+button.tile { cursor: pointer; }
+.tile::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: var(--c, var(--line2)); }
+.tile b { display: block; font: 800 27px/1 "Barlow Condensed", sans-serif; color: var(--c, var(--ink)); white-space: nowrap; }
+.tile span { display: block; font-size: 12px; color: var(--muted); font-weight: 600; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tile[aria-pressed="true"] { background: var(--surface2); border-color: var(--c); box-shadow: 0 0 0 1px var(--c) inset; }
+.tile.chollazo { --c: var(--chollazo); } .tile.bueno { --c: var(--bueno); } .tile.normal { --c: var(--normal); }
+.tile.trampa { --c: var(--trampa); border-style: dashed; } .tile.trampa[aria-pressed="true"] { border-style: solid; }
+.tile.verde { --c: var(--bueno); } .tile.ambar { --c: var(--ofrece); } .tile.azul { --c: var(--normal); } .tile.rojo { --c: var(--chollazo); }
+
+.controls { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 10px; }
+.seg { display: inline-flex; background: var(--surface); border: 1px solid var(--line); border-radius: 999px; padding: 3px; }
+.seg button { border: 0; background: transparent; padding: 6px 12px; border-radius: 999px; cursor: pointer; font-weight: 600; font-size: 13.5px; color: var(--muted); }
+.seg button[aria-pressed="true"] { background: var(--ink); color: var(--bg); }
+.row { display: flex; flex-wrap: wrap; gap: 14px; align-items: center; color: var(--muted); font-size: 13.5px; }
+.row label { display: inline-flex; align-items: center; gap: 6px; }
+.row b { color: var(--ink); }
+select, input[type=text], input[type=number], input[type=date], input[type=url], input[type=password], input[type=search], textarea {
+  background: var(--bg); border: 1px solid var(--line2); border-radius: 10px; padding: 9px 11px; min-height: 42px; width: 100%; }
+select { width: auto; min-height: 36px; padding: 5px 8px; background: var(--surface); }
+textarea { min-height: 90px; resize: vertical; }
+input:focus, select:focus, textarea:focus { outline: 2px solid var(--normal); outline-offset: 0; border-color: transparent; }
+input[type=range] { accent-color: var(--chollazo); width: 120px; }
+input[type=checkbox] { accent-color: var(--chollazo); width: 16px; height: 16px; }
+
+.legend { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 12.5px; color: var(--muted); margin-bottom: 10px; align-items: center; }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.lp { display: inline-flex; align-items: center; gap: 3px; height: 20px; padding: 0 7px; border-radius: 999px; background: var(--c); color: #fff; font: 800 12px/1 "Barlow Condensed", sans-serif; }
+.lp svg { width: 11px; height: 11px; fill: currentColor; }
+.lp.chollazo { --c: var(--chollazo); } .lp.bueno { --c: var(--bueno); } .lp.normal { --c: var(--normal); }
+.lp.trampa { --c: #2A2140; color: var(--trampa); outline: 1.5px dashed var(--trampa); }
+
+.layout { display: grid; grid-template-columns: 1fr; gap: 14px; }
+@media (min-width: 900px) {
+  .layout { grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); align-items: start; }
+  #map { position: sticky; top: 12px; height: calc(100vh - var(--nav) - 24px) !important; max-height: 820px; }
+}
+#map { height: 54vh; min-height: 330px; border-radius: var(--r); border: 1px solid var(--line); background: #0E1218; }
+.leaflet-container { background: #0E1218; font-family: inherit; }
+.leaflet-control-zoom a { background: var(--surface) !important; color: var(--ink) !important; border-color: var(--line) !important; }
+.leaflet-control-attribution { background: rgba(10,13,18,.75) !important; color: var(--faint) !important; font-size: 10px; }
+.leaflet-control-attribution a { color: var(--muted) !important; }
+.leaflet-popup-content-wrapper, .leaflet-popup-tip { background: var(--surface2); color: var(--ink); border: 1px solid var(--line2); box-shadow: 0 8px 28px rgba(0,0,0,.5); }
+.leaflet-popup-content { margin: 10px 12px; font-size: 13.5px; line-height: 1.45; }
+.leaflet-popup-content a { color: var(--normal); font-weight: 700; }
+.leaflet-container a.leaflet-popup-close-button { color: var(--muted); }
+
+/* marcadores: etiquetas de precio */
+.pin { position: absolute; left: 0; top: 0; transform: translate(-50%, calc(-100% - 7px)); display: inline-flex; align-items: center; gap: 4px; height: 26px; padding: 0 9px 0 7px; border-radius: 999px; background: var(--c); color: #fff; white-space: nowrap; font: 800 15px/1 "Barlow Condensed", sans-serif; letter-spacing: .3px; box-shadow: 0 3px 10px rgba(0,0,0,.55), 0 0 0 1.5px rgba(10,13,18,.9); cursor: pointer; }
+.pin::after { content: ""; position: absolute; left: 50%; bottom: -6px; transform: translateX(-50%); border: 6px solid transparent; border-bottom: 0; border-top-color: var(--c); }
+.pin svg { width: 13px; height: 13px; fill: currentColor; flex: none; }
+.pin .rep { width: 17px; height: 17px; border-radius: 50%; background: rgba(0,0,0,.28); display: inline-grid; place-items: center; margin-left: 1px; }
+.pin .rep svg { width: 10px; height: 10px; }
+.pin .star { position: absolute; top: -9px; right: -7px; width: 18px; height: 18px; border-radius: 50%; background: var(--estrella); color: #241a00; display: grid; place-items: center; font-size: 11px; box-shadow: 0 0 0 2px var(--bg); }
+.pin.chollazo { --c: var(--chollazo); height: 30px; font-size: 17px; padding: 0 11px 0 9px; z-index: 2; animation: resalta 2.2s ease-in-out infinite; }
+.pin.bueno { --c: var(--bueno); } .pin.normal { --c: var(--normal); }
+.pin.trampa { --c: #2A2140; color: var(--trampa); outline: 2px dashed var(--trampa); outline-offset: -1px; }
+.pin.trampa::after { border-top-color: var(--trampa); }
+.pin .q { display: inline-grid; place-items: center; width: 16px; height: 16px; border-radius: 50%; background: var(--trampa); color: #1A1230; font-size: 12px; margin-left: 2px; }
+.pin.off { --c: var(--off); opacity: .7; text-decoration: line-through; }
+.pin.sel { box-shadow: 0 0 0 3px var(--ink), 0 3px 12px rgba(0,0,0,.6); }
+.pin.chollazo .onda { position: absolute; inset: 0; border-radius: 999px; border: 2px solid var(--chollazo); pointer-events: none; animation: onda 2.2s cubic-bezier(.2,.6,.3,1) infinite; }
+.pin.chollazo .onda.o2 { animation-delay: .73s; } .pin.chollazo .onda.o3 { animation-delay: 1.46s; }
+@keyframes onda { 0% { transform: scale(1); opacity: .85; } 100% { transform: scale(2.3, 2.9); opacity: 0; } }
+@keyframes resalta { 0%, 100% { filter: brightness(1); } 12% { filter: brightness(1.25); } }
+@keyframes latido { 0% { box-shadow: 0 0 0 0 var(--chollazo-glow); } 70% { box-shadow: 0 0 0 9px rgba(255,70,85,0); } 100% { box-shadow: 0 0 0 0 rgba(255,70,85,0); } }
+@media (prefers-reduced-motion: reduce) { .pin.chollazo, .pin.chollazo .onda, h1 .dot { animation-duration: 6s !important; } }
+.home { width: 16px; height: 16px; border-radius: 50%; background: var(--ink); border: 4px solid var(--bg); box-shadow: 0 0 0 2px var(--ink); }
+
+/* fichas */
+.list { display: flex; flex-direction: column; gap: 12px; }
+.empty { background: var(--surface); border: 1px dashed var(--line2); border-radius: var(--r); padding: 22px; color: var(--muted); text-align: center; }
+.empty b { color: var(--ink); }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); overflow: hidden; position: relative; scroll-margin-top: 12px; }
+.card::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: var(--c, var(--line2)); }
+.card.chollazo { --c: var(--chollazo); border-color: rgba(255,70,85,.55); box-shadow: 0 0 24px -8px var(--chollazo-glow); }
+.card.bueno { --c: var(--bueno); } .card.normal { --c: var(--normal); }
+.card.trampa { --c: var(--trampa); border: 1.5px dashed rgba(177,132,255,.6); }
+.card.vendido { --c: var(--off); opacity: .6; }
+.card.estrella { --c: var(--estrella); }
+.card.sel { border-color: var(--ink); border-style: solid; box-shadow: 0 0 0 1px var(--ink); }
+.top { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 11px 14px 0 18px; font-size: 12.5px; color: var(--muted); }
+.tag { display: inline-flex; align-items: center; gap: 5px; font: 800 13px/1 "Barlow Condensed", sans-serif; letter-spacing: .6px; text-transform: uppercase; padding: 4px 8px; border-radius: 6px; background: var(--c, var(--line2)); color: #fff; white-space: nowrap; }
+.card.trampa .tag { background: rgba(177,132,255,.16); color: var(--trampa); }
+.card.vendido .tag { background: var(--off); }
+.card.estrella .tag { color: #241a00; }
+.kind { display: inline-flex; align-items: center; gap: 5px; text-align: right; }
+.kind svg { width: 13px; height: 13px; fill: var(--muted); flex: none; }
+.head { padding: 6px 14px 0 18px; display: flex; gap: 12px; align-items: flex-start; }
+.head .txt { flex: 1; min-width: 0; }
+.foto { width: 64px; height: 64px; border-radius: 10px; object-fit: cover; background: var(--surface2); flex: none; border: 1px solid var(--line); }
+.model { font-weight: 800; font-size: 17.5px; line-height: 1.25; display: block; }
+.where { color: var(--muted); font-size: 13px; }
+.where b { color: var(--ink); font-weight: 700; }
+.nums { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1px; margin: 10px 14px 0 18px; background: var(--line); border-radius: 10px; overflow: hidden; }
+.nums.n3 { grid-template-columns: repeat(3, 1fr); }
+.nums div { background: var(--surface2); padding: 7px 8px; min-width: 0; }
+.nums span { display: block; font-size: 11px; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: .4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.nums b { font: 800 21px/1.1 "Barlow Condensed", sans-serif; white-space: nowrap; }
+.nums .neg b { color: var(--ofrece); } .nums .gan b { color: var(--bueno); } .nums .per b { color: var(--chollazo); }
+.card.trampa .nums .gan b { color: var(--trampa); }
+.body { padding: 10px 14px 13px 18px; display: flex; flex-direction: column; gap: 8px; font-size: 14px; color: #C9D2DC; }
+.body b { color: var(--ink); }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip { display: inline-flex; align-items: center; gap: 5px; font-size: 12.5px; font-weight: 600; color: var(--muted); background: var(--surface2); border: 1px solid var(--line); border-radius: 999px; padding: 3px 9px; }
+.chip b { color: var(--ink); }
+.risk { background: rgba(177,132,255,.1); border: 1px solid rgba(177,132,255,.35); color: #DCCBFF; border-radius: 10px; padding: 8px 10px; font-size: 13.5px; }
+.risk.medio { background: rgba(245,165,36,.08); border-color: rgba(245,165,36,.3); color: #F3D49B; }
+.risk b { color: inherit; }
+.drop { color: var(--bueno); font-weight: 700; font-size: 13.5px; }
+.nota { background: rgba(255,201,74,.08); border: 1px solid rgba(255,201,74,.3); color: #FBE3A6; border-radius: 10px; padding: 7px 10px; font-size: 13.5px; }
+details { border-top: 1px solid var(--line); padding-top: 7px; }
+summary { cursor: pointer; font-weight: 700; color: var(--ink); }
+details ul { margin: 6px 0 0; padding-left: 18px; }
+details li { margin: 3px 0; }
+details p { margin: 6px 0; }
+.msg { background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; font-size: 13.5px; white-space: pre-wrap; }
+.actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 2px; }
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 40px; padding: 0 14px; border-radius: 10px; border: 1px solid var(--line2); background: var(--surface2); font-weight: 700; font-size: 14px; text-decoration: none; cursor: pointer; white-space: nowrap; }
+.btn:hover { border-color: var(--muted); }
+.btn:disabled { opacity: .5; cursor: wait; }
+.btn.main { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+.btn.verde { background: var(--bueno); color: #062417; border-color: var(--bueno); }
+.btn.peligro { color: #FF8A94; }
+.btn.star { color: var(--estrella); }
+.btn.star.on { background: var(--estrella); color: #241a00; border-color: var(--estrella); }
+.btn.grande { width: 100%; min-height: 48px; font-size: 15.5px; }
+.card.chollazo .btn.main { background: var(--chollazo); border-color: var(--chollazo); color: #fff; }
+.note { color: var(--faint); font-size: 12.5px; margin-top: 16px; }
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 14px; margin-bottom: 12px; }
+.panel p { margin: 0 0 8px; color: var(--muted); font-size: 13.5px; }
+.form { display: grid; gap: 10px; }
+.form label { display: grid; gap: 4px; font-size: 13px; font-weight: 700; color: var(--muted); }
+.form .dos { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.form .tres { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+.form .hint { font-weight: 500; color: var(--faint); font-size: 12px; }
+.rep-row { display: grid; grid-template-columns: 1fr 96px 42px; gap: 8px; align-items: center; }
+.rep-row select { width: 100%; min-height: 42px; background: var(--bg); }
+.big { font: 800 34px/1 "Barlow Condensed", sans-serif; }
+.resultado { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-top: 12px; }
+.pos { color: var(--bueno) !important; } .negv { color: var(--chollazo) !important; }
+
+/* estudio */
+.tabla { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+.tabla th { text-align: left; color: var(--muted); font-weight: 700; font-size: 11.5px; text-transform: uppercase; letter-spacing: .4px; padding: 6px 6px; border-bottom: 1px solid var(--line); }
+.tabla td { padding: 8px 6px; border-bottom: 1px solid var(--line); vertical-align: top; }
+.tabla td.n { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.tabla th.n { text-align: right; }
+.scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+.modelo-card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 12px 14px; }
+.modelo-card .t { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.modelo-card .t b { font-size: 16.5px; }
+.modelo-card .t span { color: var(--muted); font-size: 12.5px; }
+.modelo-card .nums { margin: 10px 0 0; }
+.barra { height: 6px; border-radius: 3px; background: var(--line); overflow: hidden; margin-top: 6px; }
+.barra i { display: block; height: 100%; background: var(--bueno); }
+
+dialog { background: var(--surface); color: var(--ink); border: 1px solid var(--line2); border-radius: 18px; padding: 0; width: min(560px, calc(100vw - 20px)); max-height: calc(100dvh - 30px); }
+dialog::backdrop { background: rgba(0,0,0,.65); }
+dialog .dh { display: flex; justify-content: space-between; align-items: center; padding: 14px 16px 6px; position: sticky; top: 0; background: var(--surface); z-index: 1; }
+dialog .dh h2 { margin: 0; font-size: 22px; }
+dialog .db { padding: 6px 16px 18px; }
+dialog .df { display: flex; gap: 8px; padding: 12px 16px calc(14px + env(safe-area-inset-bottom)); border-top: 1px solid var(--line); position: sticky; bottom: 0; background: var(--surface); }
+dialog .df .btn { flex: 1; }
+.toast { position: fixed; z-index: 3000; left: 50%; bottom: calc(var(--nav) + 14px + env(safe-area-inset-bottom)); transform: translateX(-50%); background: var(--ink); color: var(--bg); padding: 10px 16px; border-radius: 12px; font-weight: 700; font-size: 14px; box-shadow: 0 8px 24px rgba(0,0,0,.5); max-width: calc(100vw - 32px); text-align: center; }
+.toast.err { background: var(--chollazo); color: #fff; }
+:focus-visible { outline: 2px solid var(--normal); outline-offset: 2px; }
+
+@media (max-width: 520px) {
+  h1 { font-size: 24px; }
+  .tile { padding: 8px 8px 7px 11px; }
+  .tile b { font-size: 23px; }
+  .tile span { font-size: 11px; }
+  .seg button { padding: 6px 10px; font-size: 13px; }
+  .nums b { font-size: 19px; }
+  .foto { width: 56px; height: 56px; }
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <h1><span class="dot" aria-hidden="true"></span>Radar de chollos</h1>
+      <span class="updated" id="updated">Cargando…</span>
+    </div>
+    <button type="button" class="icon-btn" id="btn-ajustes" aria-label="Ajustes"><svg viewBox="0 0 24 24"><path d="M19.4 13a7.5 7.5 0 0 0 0-2l2.1-1.6-2-3.5-2.5 1a7.4 7.4 0 0 0-1.7-1L15 3.3h-4l-.4 2.6a7.4 7.4 0 0 0-1.7 1l-2.5-1-2 3.5L6.6 11a7.5 7.5 0 0 0 0 2l-2.1 1.6 2 3.5 2.5-1a7.4 7.4 0 0 0 1.7 1l.4 2.6h4l.4-2.6a7.4 7.4 0 0 0 1.7-1l2.5 1 2-3.5zM13 15.5a3.5 3.5 0 1 1 0-7 3.5 3.5 0 0 1 0 7z" transform="translate(-1 0)"/></svg></button>
+  </header>
+
+  <!-- ===================== MAPA ===================== -->
+  <section id="v-mapa" data-vista="mapa">
+    <div class="tiles" role="group" aria-label="Filtrar por nivel de chollo (pulsa otra vez para ver todos)">
+      <button type="button" class="tile chollazo" data-niv="chollazo" aria-pressed="false"><b id="n-chollazo">0</b><span>Chollazos</span></button>
+      <button type="button" class="tile bueno" data-niv="bueno" aria-pressed="false"><b id="n-bueno">0</b><span>Buenos</span></button>
+      <button type="button" class="tile normal" data-niv="normal" aria-pressed="false"><b id="n-normal">0</b><span>Normales</span></button>
+      <button type="button" class="tile trampa" data-niv="trampa" aria-pressed="false"><b id="n-trampa">0</b><span>¿Trampa?</span></button>
+    </div>
+    <div class="controls">
+      <div class="seg" role="group" aria-label="Marca">
+        <button type="button" data-fam="todos" aria-pressed="true">Todos</button>
+        <button type="button" data-fam="iphone" aria-pressed="false">iPhone</button>
+        <button type="button" data-fam="android" aria-pressed="false">Android</button>
+      </div>
+      <div class="seg" role="group" aria-label="Estado">
+        <button type="button" data-tipo="todos" aria-pressed="true">Todo</button>
+        <button type="button" data-tipo="listo" aria-pressed="false">Listos</button>
+        <button type="button" data-tipo="reparar" aria-pressed="false">A reparar</button>
+      </div>
+      <div class="row">
+        <label for="km">Hasta <b id="kmv">60 km</b> <input type="range" id="km" min="5" max="60" step="5" value="60"></label>
+        <label for="orden">Ordenar <select id="orden"><option value="beneficio">Más beneficio</option><option value="km">Más cerca</option><option value="nuevo">Más nuevos</option><option value="rapido">Se venden antes</option></select></label>
+        <label for="vend"><input type="checkbox" id="vend"> Ver vendidos</label>
+      </div>
+    </div>
+    <div class="legend" aria-label="Leyenda del mapa">
+      <span><i class="lp chollazo" id="lg-1"></i>Chollazo (con ondas)</span>
+      <span><i class="lp bueno" id="lg-2"></i>Bueno</span>
+      <span><i class="lp normal" id="lg-3"></i>Normal</span>
+      <span><i class="lp trampa" id="lg-4"></i>Posible trampa</span>
+      <span><i class="lp normal" id="lg-5"></i>Para reparar</span>
+      <span>⭐ Guardado</span>
+    </div>
+    <div class="layout">
+      <div id="map" role="region" aria-label="Mapa de chollos"></div>
+      <div class="list" id="list"><div class="empty">Cargando chollos…</div></div>
+    </div>
+    <p class="note">La ubicación de Wallapop es aproximada. Distancias en línea recta desde <span class="orig">Fuenlabrada</span>; la gasolina se calcula con un 30 % más de recorrido por carretera. Máximo = lo más que puedes pagar para ganar lo mínimo fijado. Los morados salen mucho más baratos de lo normal o piden envío o pago por adelantado: pueden ser chollo, pero revísalos con lupa.</p>
+  </section>
+
+  <!-- ===================== GUARDADOS ===================== -->
+  <section id="v-guardados" data-vista="guardados" hidden>
+    <h2>Guardados</h2>
+    <p class="sub">Los anuncios que habéis guardado vosotros. Al guardar uno, al otro le llega un aviso en Telegram.</p>
+    <div class="panel">
+      <form class="form" id="f-enlace">
+        <label>Guardar un anuncio de Wallapop que no esté en el radar
+          <input type="url" id="enlace-url" placeholder="Pega aquí el enlace del anuncio" inputmode="url" required></label>
+        <label>Nota (opcional)<input type="text" id="enlace-nota" placeholder="Ej.: le he escrito, contesta mañana" maxlength="140"></label>
+        <button class="btn main grande" type="submit">⭐ Guardar y avisar</button>
+        <span class="hint">El bot lo analiza (precio máximo, oferta y preguntas) y os avisa en Telegram en 1 o 2 minutos.</span>
+      </form>
+    </div>
+    <div class="list" id="l-guardados"></div>
+  </section>
+
+  <!-- ===================== REGISTRO ===================== -->
+  <section id="v-registro" data-vista="registro" hidden>
+    <h2>Compras y ventas</h2>
+    <p class="sub">Lo que habéis comprado, lo que costó repararlo y por cuánto lo vendéis. El bot aprende de esto para afinar los precios.</p>
+    <div class="tiles" id="reg-tiles"></div>
+    <button class="btn verde grande" type="button" id="btn-nueva">＋ Apuntar una compra</button>
+    <div class="controls" style="margin-top:12px">
+      <div class="seg" role="group" aria-label="Mostrar">
+        <button type="button" data-rf="todos" aria-pressed="true">Todos</button>
+        <button type="button" data-rf="stock" aria-pressed="false">En stock</button>
+        <button type="button" data-rf="vendidos" aria-pressed="false">Vendidos</button>
+      </div>
+    </div>
+    <div class="list" id="l-registro"></div>
+  </section>
+
+  <!-- ===================== ESTUDIO ===================== -->
+  <section id="v-estudio" data-vista="estudio" hidden>
+    <h2>Estudio del mercado</h2>
+    <p class="sub" id="est-intro">Cargando…</p>
+    <div id="est-nuestro"></div>
+    <h3>Precio real de venta por modelo</h3>
+    <div class="controls">
+      <div class="seg" role="group" aria-label="Tipo">
+        <button type="button" data-et="listo" aria-pressed="true">Funcionando</button>
+        <button type="button" data-et="reparar" aria-pressed="false">Rotos</button>
+      </div>
+      <div class="row"><label for="est-orden">Ordenar <select id="est-orden"><option value="vendidos">Más vendidos</option><option value="dias">Se venden antes</option><option value="modelo">Modelo</option></select></label></div>
+    </div>
+    <div class="list" id="l-estudio"></div>
+    <h3>Últimas ventas detectadas</h3>
+    <p class="sub">Anuncios que el bot seguía y se han vendido o retirado: modelo, si estaba roto, batería, qué había que reparar y cuánto cuesta cada pieza.</p>
+    <div class="scroll"><table class="tabla" id="t-ultimas"></table></div>
+    <h3>Precio de las piezas</h3>
+    <p class="sub" id="piezas-intro">Precios de tiendas para reparadores (5G-M, AliExpress, Amazon) con IVA. Cuando apuntéis reparaciones en el registro, se usan vuestros costes reales.</p>
+    <div class="scroll"><table class="tabla" id="t-piezas"></table></div>
+  </section>
+
+  <!-- ===================== GASOLINA ===================== -->
+  <section id="v-gasolina" data-vista="gasolina" hidden>
+    <h2>Gasolina</h2>
+    <p class="sub">Cuánto cuesta ir a por un móvil con el Seat León, ida y vuelta desde <span class="orig">Fuenlabrada</span>.</p>
+    <div class="panel">
+      <form class="form" id="f-gas">
+        <label>¿A dónde vais?
+          <input type="text" id="gas-destino" placeholder="Ej.: Getafe, o calle Mayor 5 Leganés" required list="gas-lista"></label>
+        <datalist id="gas-lista"></datalist>
+        <button class="btn main grande" type="submit">⛽ Calcular</button>
+      </form>
+      <div id="gas-res"></div>
+    </div>
+    <div class="panel">
+      <p><b style="color:var(--ink)">Tu coche</b> · Seat León MK2 gasolina</p>
+      <div class="form">
+        <div class="dos">
+          <label>Consumo (l/100 km)<input type="number" id="aj-consumo" step="0.1" min="3" max="15" inputmode="decimal"></label>
+          <label>Gasolina (€/litro)<input type="number" id="aj-litro" step="0.01" min="0.8" max="3" inputmode="decimal"></label>
+        </div>
+        <span class="hint">Gasolina 95 en Madrid el 20/10/2026: unos 1,77 €/l (motor.es). Cámbialo cuando llenes el depósito.</span>
+      </div>
+    </div>
+    <h3>Ir a por los chollos de ahora</h3>
+    <div class="scroll"><table class="tabla" id="t-gas"></table></div>
+  </section>
+</div>
+
+<nav class="tabs" aria-label="Apartados">
+  <div class="in">
+    <button type="button" data-tab="mapa"><svg viewBox="0 0 24 24"><path d="M12 2a7 7 0 0 0-7 7c0 5.2 7 13 7 13s7-7.8 7-13a7 7 0 0 0-7-7zm0 9.5A2.5 2.5 0 1 1 12 6.5a2.5 2.5 0 0 1 0 5z"/></svg>Mapa</button>
+    <button type="button" data-tab="guardados"><svg viewBox="0 0 24 24"><path d="m12 17.3 6.2 3.7-1.6-7 5.4-4.7-7.2-.6L12 2 9.2 8.7 2 9.3l5.4 4.7-1.6 7z"/></svg>Guardados<span class="badge" id="badge-g" hidden></span></button>
+    <button type="button" data-tab="registro"><svg viewBox="0 0 24 24"><path d="M19 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z"/></svg>Registro</button>
+    <button type="button" data-tab="estudio"><svg viewBox="0 0 24 24"><path d="M3.5 18.5 9.5 12.5l4 4L22 7.9 20.6 6.5l-7.1 8-4-4L2 18z"/></svg>Estudio</button>
+    <button type="button" data-tab="gasolina"><svg viewBox="0 0 24 24"><path d="m19.8 7.2-3.7-3.7-1.1 1.1 2.1 2.1A2.5 2.5 0 0 0 18.5 11.5a2.5 2.5 0 0 0 .9-.2v7.2a1 1 0 0 1-2 0V14a2 2 0 0 0-2-2h-1V5a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v16h10v-7.5h1.5v5a2.5 2.5 0 0 0 5 0V9a2.5 2.5 0 0 0-.7-1.8zM12 10H6V5h6v5z"/></svg>Gasolina</button>
+  </div>
+</nav>
+
+<!-- ===================== DIÁLOGOS ===================== -->
+<dialog id="d-compra" aria-labelledby="dc-t">
+  <form method="dialog" class="form" id="f-compra" novalidate>
+    <div class="dh"><h2 id="dc-t">Apuntar compra</h2><button class="icon-btn" value="cancel" formnovalidate aria-label="Cerrar">✕</button></div>
+    <div class="db form">
+      <label>Modelo<input type="text" name="modelo" list="lista-modelos" placeholder="iPhone 13" required autocomplete="off"></label>
+      <div class="tres">
+        <label>Capacidad<input type="text" name="capacidad" placeholder="128 GB" list="lista-caps"></label>
+        <label>Batería %<input type="number" name="bateria" min="50" max="100" inputmode="numeric" placeholder="88"></label>
+        <label>Estado<select name="estado"><option value="listo">Bien</option><option value="reparar">Roto</option></select></label>
+      </div>
+      <div class="dos">
+        <label>Pagamos (€)<input type="number" name="precio_compra" min="0" step="1" inputmode="decimal" required></label>
+        <label>Fecha<input type="date" name="fecha_compra" required></label>
+      </div>
+      <div>
+        <label style="margin-bottom:6px">Reparaciones <span class="hint">pieza y lo que os costó</span></label>
+        <div id="reps" class="form" style="gap:8px"></div>
+        <button type="button" class="btn" id="add-rep" style="margin-top:8px">＋ Añadir reparación</button>
+      </div>
+      <div class="dos">
+        <label>Gasolina (€)<input type="number" name="gasolina" min="0" step="0.1" inputmode="decimal"></label>
+        <label>Otros gastos (€)<input type="number" name="otros" min="0" step="0.1" inputmode="decimal" placeholder="funda, envío…"></label>
+      </div>
+      <details id="dc-venta"><summary>Venta (cuando lo vendáis)</summary>
+        <div class="dos" style="margin-top:8px">
+          <label>Vendido por (€)<input type="number" name="precio_venta" min="0" step="1" inputmode="decimal"></label>
+          <label>Fecha venta<input type="date" name="fecha_venta"></label>
+        </div>
+      </details>
+      <label>Enlace del anuncio (opcional)<input type="url" name="url" inputmode="url"></label>
+      <label>Notas<input type="text" name="notas" maxlength="200"></label>
+      <div class="panel" style="margin:0" id="dc-calc"></div>
+    </div>
+    <div class="df">
+      <button type="button" class="btn peligro" id="dc-borrar" hidden>Borrar</button>
+      <button type="submit" class="btn verde" value="ok" id="dc-ok">Guardar</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="d-vender" aria-labelledby="dv-t">
+  <form method="dialog" class="form" id="f-vender">
+    <div class="dh"><h2 id="dv-t">Marcar vendido</h2><button class="icon-btn" value="cancel" formnovalidate aria-label="Cerrar">✕</button></div>
+    <div class="db form">
+      <p class="sub" id="dv-sub" style="margin:0"></p>
+      <div class="dos">
+        <label>Vendido por (€)<input type="number" name="precio_venta" min="0" step="1" inputmode="decimal" required></label>
+        <label>Fecha<input type="date" name="fecha_venta" required></label>
+      </div>
+      <div class="panel" style="margin:0" id="dv-calc"></div>
+    </div>
+    <div class="df"><button type="submit" class="btn verde" value="ok">Guardar venta</button></div>
+  </form>
+</dialog>
+
+<dialog id="d-texto" aria-labelledby="dt-t">
+  <div class="dh"><h2 id="dt-t">Texto para vender</h2><button class="icon-btn" type="button" data-cerrar aria-label="Cerrar">✕</button></div>
+  <div class="db form">
+    <div id="dt-precio"></div>
+    <label>Título<input type="text" id="dt-titulo"></label>
+    <label>Descripción<textarea id="dt-desc" rows="10"></textarea></label>
+    <span class="hint">Revísalo antes de publicar: cambia lo que no sea exacto (accesorios, estado, zona).</span>
+  </div>
+  <div class="df"><button type="button" class="btn" id="dt-copiar-t">Copiar título</button><button type="button" class="btn main" id="dt-copiar">Copiar descripción</button></div>
+</dialog>
+
+<dialog id="d-ajustes" aria-labelledby="da-t">
+  <form method="dialog" class="form" id="f-ajustes">
+    <div class="dh"><h2 id="da-t">Ajustes</h2><button class="icon-btn" value="cancel" formnovalidate aria-label="Cerrar">✕</button></div>
+    <div class="db form">
+      <p class="sub" id="da-aviso" style="margin:0"></p>
+      <label>¿Quién eres? <span class="hint">sale en los avisos de Telegram</span><input type="text" name="nombre" placeholder="Ibrahim" maxlength="30"></label>
+      <label>Clave de GitHub <span class="hint">para guardar desde este móvil (solo se queda en este navegador)</span>
+        <input type="password" name="token" placeholder="github_pat_…" autocomplete="off"></label>
+      <span class="hint">Se crea una sola vez en GitHub › Settings › Developer settings › Fine-grained tokens, solo para el repositorio radar-chollos y con permiso «Contents: Read and write». Sin clave la web funciona igual, pero solo para mirar.</span>
+      <button type="button" class="btn" id="da-probar">Probar conexión</button>
+      <span id="da-res" class="hint"></span>
+    </div>
+    <div class="df"><button type="submit" class="btn verde" value="ok">Guardar ajustes</button></div>
+  </form>
+</dialog>
+
+<datalist id="lista-modelos"></datalist>
+<datalist id="lista-caps"><option value="64 GB"><option value="128 GB"><option value="256 GB"><option value="512 GB"><option value="1 TB"></datalist>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script>
+// ------------------------------------------------------------------ utilidades
+const $ = s => document.querySelector(s);
+const $$ = s => [...document.querySelectorAll(s)];
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const eur = n => n == null || n === '' || isNaN(n) ? '—' : Math.round(n) + ' €';
+const eur2 = n => n == null || isNaN(n) ? '—' : n.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €';
+const signo = n => (n > 0 ? '+' : '') + Math.round(n) + ' €';
+const num = v => v === '' || v == null || isNaN(+v) ? null : +v;
+const hoyISO = () => new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 10);
+const DIA = 86400000;
+function hace(ms) { if (!ms) return ''; const m = Math.max(1, Math.round((Date.now() - ms) / 60000)); if (m < 60) return `hace ${m} min`; const h = Math.round(m / 60); return h < 48 ? `hace ${h} h` : `hace ${Math.round(h / 24)} días`; }
+function leer(k, d) { try { return JSON.parse(localStorage.getItem(k)) ?? d; } catch (e) { return d; } }
+function escribir(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }
+let toastT;
+function toast(t, err) { let el = $('.toast'); if (!el) { el = document.createElement('div'); el.className = 'toast'; el.setAttribute('role', 'status'); document.body.append(el); } el.textContent = t; el.classList.toggle('err', !!err); el.hidden = false; clearTimeout(toastT); toastT = setTimeout(() => el.hidden = true, err ? 5000 : 2600); }
+async function copiar(t, btn) { try { await navigator.clipboard.writeText(t); if (btn) { const o = btn.textContent; btn.textContent = 'Copiado'; setTimeout(() => btn.textContent = o, 1500); } } catch (e) { toast('No se pudo copiar: mantén pulsado el texto para copiarlo', true); } }
+
+// ------------------------------------------------------------------ ajustes y GitHub
+const REPO = (() => {
+  const h = location.hostname, seg = location.pathname.split('/').filter(s => s && !s.endsWith('.html'));
+  return h.endsWith('.github.io') ? { owner: h.split('.')[0], repo: seg[0] || 'radar-chollos' } : { owner: 'gulkysimba24', repo: 'radar-chollos' };
+})();
+const AJ = Object.assign({ nombre: '', token: '', consumo: 6.5, litro: 1.77, factor: 1.3 }, leer('radar-ajustes', {}));
+const guardarAjustes = () => escribir('radar-ajustes', AJ);
+const b64 = s => btoa(unescape(encodeURIComponent(s)));
+const de64 = s => decodeURIComponent(escape(atob(s.replace(/\s/g, ''))));
+async function gh(path, opts = {}) {
+  return fetch(`https://api.github.com/repos/${REPO.owner}/${REPO.repo}/contents/${path}`, {
+    ...opts, cache: 'no-store',
+    headers: { Accept: 'application/vnd.github+json', Authorization: `Bearer ${AJ.token}`, 'X-GitHub-Api-Version': '2022-11-28', ...(opts.headers || {}) },
+  });
+}
+async function ghLeer(path, defecto) {
+  const r = await gh(path + '?ref=main&t=' + Date.now());
+  if (r.status === 404) return { json: structuredClone(defecto), sha: null };
+  if (!r.ok) throw new Error(r.status === 401 ? 'La clave de GitHub no vale o ha caducado' : 'GitHub respondió ' + r.status);
+  const j = await r.json();
+  return { json: JSON.parse(de64(j.content)), sha: j.sha };
+}
+async function cambiar(path, defecto, fn, mensaje) {
+  if (!AJ.token) { abrirAjustes('Para guardar desde la web hace falta la clave de GitHub (solo una vez en cada móvil).'); throw new Error('sin clave'); }
+  for (let i = 0; i < 4; i++) {
+    const { json, sha } = await ghLeer(path, defecto);
+    const nuevo = fn(json) ?? json;
+    const r = await gh(path, { method: 'PUT', body: JSON.stringify({ message: mensaje, content: b64(JSON.stringify(nuevo, null, 1)), ...(sha ? { sha } : {}), branch: 'main' }) });
+    if (r.ok) return nuevo;
+    if (r.status !== 409 && r.status !== 422) throw new Error(r.status === 403 || r.status === 401 ? 'La clave no tiene permiso para escribir (Contents: Read and write)' : 'GitHub respondió ' + r.status);
+    await new Promise(res => setTimeout(res, 600 + i * 500));
+  }
+  throw new Error('No se pudo guardar, inténtalo otra vez');
+}
+
+// ------------------------------------------------------------------ datos
+let data = { chollos: [] }, estudio = {}, info = {}, guardados = { items: {} }, registro = { compras: [] };
+let homeLL = [40.2842, -3.7942], map, layer;
+const S = Object.assign({ fam: 'todos', tipo: 'todos', niv: 'todos', km: 60, orden: 'beneficio', vend: false, tab: 'mapa', rf: 'todos', et: 'listo', eo: 'vendidos' }, leer('radar-f3', {}));
+S.sel = '';
+const saveS = () => escribir('radar-f3', { fam: S.fam, tipo: S.tipo, niv: S.niv, km: S.km, orden: S.orden, vend: S.vend, tab: S.tab, rf: S.rf, et: S.et, eo: S.eo });
+
+async function pages(nombre, defecto) {
+  try { const r = await fetch(nombre + '?t=' + Date.now(), { cache: 'no-store' }); if (!r.ok) return defecto; return await r.json(); } catch (e) { return defecto; }
+}
+async function cargarPropios() {
+  if (AJ.token) {
+    try {
+      const [g, r] = await Promise.all([ghLeer('guardados.json', { items: {} }), ghLeer('registro.json', { compras: [] })]);
+      guardados = g.json; registro = r.json; return;
+    } catch (e) { toast(e.message, true); }
+  }
+  guardados = await pages('guardados.json', { items: {} });
+  registro = await pages('registro.json', { compras: [] });
+}
+
+// ------------------------------------------------------------------ chollos / mapa
+const MINIMO = { iphone_listo: 25, iphone_reparar: 40, android_listo: 60, android_reparar: 80 };
+function cat(c) {
+  if (c.categoria === 'trampa' || c.riesgo === 'alto') return 'trampa';
+  if (c.categoria) return c.categoria;
+  const v = (c.beneficio || 0) / (MINIMO[c.familia + '_' + c.tipo] || 30);
+  return v >= 2.5 ? 'chollazo' : v >= 1.6 ? 'bueno' : 'normal';
+}
+const CAT_TXT = { chollazo: '🔥 Chollazo', bueno: 'Chollo bueno', normal: 'Chollo normal', trampa: '¿Trampa?' };
+const ICO = {
+  apple: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16.6 12.7c0-2.5 2-3.7 2.1-3.8-1.2-1.7-3-1.9-3.6-2-1.5-.2-3 .9-3.8.9-.8 0-2-.9-3.3-.8-1.7 0-3.2 1-4.1 2.5-1.8 3-.5 7.6 1.2 10 .8 1.2 1.8 2.6 3.1 2.5 1.2 0 1.7-.8 3.2-.8s1.9.8 3.2.8c1.3 0 2.2-1.2 3-2.4.9-1.4 1.3-2.8 1.3-2.8 0-.1-2.4-.9-2.3-4.1zM14.2 5.2c.7-.8 1.1-1.9 1-3-1 0-2.1.7-2.8 1.5-.6.7-1.2 1.8-1 2.9 1.1.1 2.1-.6 2.8-1.4z"/></svg>',
+  android: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 18c0 .55.45 1 1 1h1v3.5a1.5 1.5 0 0 0 3 0V19h2v3.5a1.5 1.5 0 0 0 3 0V19h1c.55 0 1-.45 1-1V8H6v10zM3.5 8A1.5 1.5 0 0 0 2 9.5v7a1.5 1.5 0 0 0 3 0v-7A1.5 1.5 0 0 0 3.5 8zm17 0A1.5 1.5 0 0 0 19 9.5v7a1.5 1.5 0 0 0 3 0v-7A1.5 1.5 0 0 0 20.5 8zm-4.97-5.84 1.3-1.3a.5.5 0 0 0-.7-.7l-1.48 1.48A5.96 5.96 0 0 0 12 1c-.96 0-1.86.23-2.66.63L7.85.15a.5.5 0 0 0-.7.7l1.31 1.31A5.97 5.97 0 0 0 6 7h12a5.97 5.97 0 0 0-2.47-4.84zM10 5H9V4h1v1zm5 0h-1V4h1v1z"/></svg>',
+  reparar: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M22.7 19l-9.1-9.1c.9-2.3.4-5-1.5-6.9-2-2-5-2.4-7.4-1.3L9 6 6 9 1.6 4.7C.4 7.1.9 10.1 2.9 12.1c1.9 1.9 4.6 2.4 6.9 1.5l9.1 9.1c.4.4 1 .4 1.4 0l2.3-2.3c.5-.4.5-1.1.1-1.4z"/></svg>',
+};
+const guardado = id => !!(guardados.items || {})[id];
+
+function gasolina(km) {   // km en línea recta, solo ida
+  if (km == null) return null;
+  const ruta = km * AJ.factor * 2, litros = ruta * AJ.consumo / 100;
+  return { ruta, litros, euros: litros * AJ.litro };
+}
+function maps(c) { return 'https://www.google.com/maps/dir/?api=1&origin=' + encodeURIComponent((data.origen?.nombre || 'Fuenlabrada') + ', Madrid') + '&destination=' + c.lat + ',' + c.lng + '&travelmode=driving'; }
+
+function base() {
+  return data.chollos.filter(c => (S.fam === 'todos' || c.familia === S.fam) && (S.tipo === 'todos' || c.tipo === S.tipo)
+    && (c.km == null || c.km <= S.km) && (S.vend || c.estado !== 'vendido'));
+}
+function visibles() {
+  const l = base().filter(c => S.niv === 'todos' || cat(c) === S.niv);
+  const peso = { chollazo: 3, bueno: 2, normal: 1, trampa: 0 };
+  const pb = c => c.beneficio * (cat(c) === 'trampa' ? 0.4 : c.riesgo === 'medio' ? 0.75 : 1);
+  const k = { beneficio: (a, b) => pb(b) - pb(a), km: (a, b) => (a.km ?? 99) - (b.km ?? 99), nuevo: (a, b) => b.avisado_ms - a.avisado_ms,
+              rapido: (a, b) => (a.dias_venta ?? 99) - (b.dias_venta ?? 99) || pb(b) - pb(a) }[S.orden];
+  return l.sort((a, b) => (a.estado === 'vendido') - (b.estado === 'vendido') || (S.orden === 'beneficio' ? peso[cat(b)] - peso[cat(a)] : 0) || k(a, b));
+}
+function marcador(c) {
+  const k = c.estado === 'vendido' ? 'off' : cat(c);
+  return `<div class="pin ${k} ${S.sel === c.id ? 'sel' : ''}">`
+    + (k === 'chollazo' ? '<i class="onda"></i><i class="onda o2"></i><i class="onda o3"></i>' : '')
+    + (c.familia === 'iphone' ? ICO.apple : ICO.android) + `<span>${Math.round(c.precio)}€</span>`
+    + (c.tipo === 'reparar' ? `<span class="rep">${ICO.reparar}</span>` : '')
+    + (k === 'trampa' ? '<span class="q">?</span>' : '')
+    + (guardado(c.id) ? '<span class="star">★</span>' : '') + '</div>';
+}
+function aviso(c) {
+  if (cat(c) === 'trampa') {
+    const motivo = c.motivo_trampa || (c.pct_mercado ? `está al ${c.pct_mercado} % de su precio normal` : 'precio muy por debajo de lo normal');
+    return `<div class="risk"><b>¿Trampa? ${esc(motivo.charAt(0).toUpperCase() + motivo.slice(1))}.</b> Puede ser estafa, robado, financiado o tener algo oculto, aunque a veces es un chollo real. Pide factura y foto del IMEI en Ajustes antes de quedar. Nunca pagues ni envíes nada por adelantado.</div>`;
+  }
+  if (c.riesgo === 'medio') return `<div class="risk medio"><b>Por debajo de mercado (${c.pct_mercado} %).</b> Pide factura y comprueba el IMEI.</div>`;
+  return '';
+}
+function fichaHTML(c, o = {}) {
+  const vend = c.estado === 'vendido', k = o.clase || (vend ? 'vendido' : cat(c));
+  const tipo = vend ? 'Ya no está a la venta' : c.tipo === 'listo' ? 'Listo para vender' : `Reparación ${c.nivel || ''}`;
+  const bajada = c.precio_inicial && c.precio_inicial > c.precio ? `<div class="drop">↓ Ha bajado de ${eur(c.precio_inicial)} a ${eur(c.precio)}</div>` : '';
+  const g = gasolina(c.km);
+  const chips = [
+    g ? `<span class="chip">⛽ <b>${eur2(g.euros)}</b> ida y vuelta</span>` : '',
+    c.dias_venta != null ? `<span class="chip">⏱️ se vende en <b>~${c.dias_venta} días</b></span>` : '',
+    c.bateria ? `<span class="chip">🔋 <b>${c.bateria} %</b></span>` : '',
+    c.fuente_venta ? `<span class="chip">📊 precio según ${esc(c.fuente_venta)}</span>` : '',
+  ].join('');
+  const on = guardado(c.id);
+  return `<article class="card ${k} ${S.sel === c.id && !o.sinSel ? 'sel' : ''}" ${o.sinSel ? '' : `id="c-${esc(c.id)}"`}>
+    <div class="top"><span class="tag">${o.tag || (vend ? 'Vendido' : CAT_TXT[cat(c)])}</span>
+      <span class="kind">${c.familia === 'iphone' ? ICO.apple : ICO.android}${esc(tipo)}${c.avisado_ms ? ' · ' + esc(hace(c.avisado_ms)) : ''}</span></div>
+    <div class="head">${c.foto ? `<img class="foto" src="${esc(c.foto)}" alt="" loading="lazy" referrerpolicy="no-referrer">` : ''}
+      <div class="txt"><span class="model">${esc(c.modelo)}${c.capacidad ? ' · ' + esc(c.capacidad) : ''}</span>
+      <span class="where">${esc(c.zona || 'Madrid')}${c.km != null ? ` · <b>~${c.km} km</b>` : ''}</span></div></div>
+    <div class="nums">
+      <div><span>Piden</span><b>${eur(c.precio)}</b></div>
+      <div class="neg"><span>Ofrece</span><b>${eur(c.oferta)}</b></div>
+      <div><span>Máximo</span><b>${eur(c.max)}</b></div>
+      <div class="gan"><span>Ganas</span><b>${c.beneficio > 0 ? '+' : ''}${eur(c.beneficio)}</b></div>
+    </div>
+    <div class="body">
+      ${o.extra || ''}${bajada}${vend ? '' : aviso(c)}
+      ${chips ? `<div class="chips">${chips}</div>` : ''}
+      <div>${esc(c.resumen)}</div>
+      ${c.reparacion && c.reparacion.length ? `<div><b>Reparación:</b> ${esc(c.reparacion.join(', '))}</div>` : ''}
+      <div><b>Se vende por</b> ~${eur(c.venta)}</div>
+      ${(c.preguntas || []).length ? `<details ${S.sel === c.id ? 'open' : ''}><summary>Qué preguntar</summary><ul>${c.preguntas.map(p => `<li>${esc(p)}</li>`).join('')}</ul></details>` : ''}
+      ${c.mensaje ? `<details><summary>Cómo regatear</summary><p>${esc(c.regateo)}</p><div class="msg">${esc(c.mensaje)}</div>
+        <p><button type="button" class="btn" data-copiar="${esc(c.mensaje)}">Copiar mensaje</button></p></details>` : ''}
+      <div class="actions">
+        <a class="btn main" href="${esc(c.url)}" target="_blank" rel="noopener">Abrir en Wallapop</a>
+        ${o.gid ? '' : `<button type="button" class="btn star ${on ? 'on' : ''}" data-guardar="${esc(c.id)}" aria-pressed="${on}">${on ? '★ Guardado' : '☆ Guardar'}</button>`}
+        ${c.lat != null ? `<a class="btn" href="${maps(c)}" target="_blank" rel="noopener">Cómo llegar</a>` : ''}
+        ${c.lat != null && !o.gid ? `<button type="button" class="btn" data-fly="${esc(c.id)}">Ver en el mapa</button>` : ''}
+        <button type="button" class="btn" data-comprar="${esc(o.gid || c.id)}">🛒 Lo hemos comprado</button>
+        ${o.gid ? `<button type="button" class="btn peligro" data-quitar="${esc(o.gid)}">Quitar</button>` : ''}
+      </div>
+    </div>
+  </article>`;
+}
+
+function renderMapa() {
+  const cuenta = { chollazo: 0, bueno: 0, normal: 0, trampa: 0 };
+  base().forEach(c => { if (c.estado !== 'vendido') cuenta[cat(c)]++; });
+  Object.keys(cuenta).forEach(k => $('#n-' + k).textContent = cuenta[k]);
+  const l = visibles();
+  $('#list').innerHTML = l.length ? l.map(c => fichaHTML(c)).join('') :
+    `<div class="empty"><b>No hay chollos con estos filtros.</b><br>Prueba a ampliar la distancia o pulsa otra vez el contador marcado para verlos todos. El radar revisa Wallapop cada 15 minutos.</div>`;
+  if (!layer) return;
+  layer.clearLayers();
+  const z = { chollazo: 1000, bueno: 500, normal: 100, trampa: 50, off: 0 };
+  l.forEach(c => {
+    if (c.lat == null) return;
+    const k = c.estado === 'vendido' ? 'off' : cat(c);
+    const m = L.marker([c.lat, c.lng], { icon: L.divIcon({ className: '', html: marcador(c), iconSize: [0, 0], iconAnchor: [0, 0], popupAnchor: [0, -38] }),
+      zIndexOffset: z[k] + (guardado(c.id) ? 300 : 0), title: `${CAT_TXT[k] || 'Vendido'} · ${c.modelo} · ${Math.round(c.precio)} €`, keyboard: true });
+    m.bindPopup(`<b>${CAT_TXT[k] || 'Vendido'}</b><br><b>${esc(c.modelo)}</b> · ${c.tipo === 'listo' ? 'listo para vender' : 'para reparar'}<br>Piden ${eur(c.precio)} · ofrece ${eur(c.oferta)} · ganas ${eur(c.beneficio)}<br>${esc(c.zona || '')}${c.km != null ? ' · ~' + c.km + ' km' : ''}<br><a href="#${esc(c.id)}">Ver ficha</a> · <a href="${esc(c.url)}" target="_blank" rel="noopener">Wallapop</a>`);
+    m.on('click', () => select(c.id, false));
+    m.addTo(layer); m._cid = c.id;
+  });
+}
+function encuadrar() {
+  const pts = visibles().filter(c => c.lat != null).map(c => [c.lat, c.lng]);
+  if (pts.length && map) map.fitBounds(L.latLngBounds([...pts, homeLL]), { padding: [50, 50], maxZoom: 13 });
+}
+function select(id, fly = true) {
+  S.sel = id; history.replaceState(null, '', '#' + id);
+  if (S.tab !== 'mapa') irA('mapa', true);
+  $$('.card.sel').forEach(e => e.classList.remove('sel'));
+  $$('.pin.sel').forEach(e => e.classList.remove('sel'));
+  layer && layer.eachLayer(m => { if (m._cid === id) m.getElement()?.querySelector('.pin')?.classList.add('sel'); });
+  const el = document.getElementById('c-' + id);
+  if (el) { el.classList.add('sel'); el.querySelector('details')?.setAttribute('open', ''); el.scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' }); }
+  const c = data.chollos.find(x => x.id === id);
+  if (fly && c && c.lat != null && map) { map.setView([c.lat, c.lng], 13); layer.eachLayer(m => { if (m._cid === id) m.openPopup(); }); }
+}
+
+// ------------------------------------------------------------------ guardados
+function listaGuardados() {
+  return Object.entries(guardados.items || {}).map(([gid, g]) => {
+    const i = info[gid] || {};
+    const viva = data.chollos.find(c => c.id === (g.wid || gid));
+    const ficha = viva || i.ficha || (g.modelo ? g : null);
+    return { gid, g, i, ficha, vendido: i.estado === 'vendido' || viva?.estado === 'vendido' };
+  }).sort((a, b) => a.vendido - b.vendido || b.g.ms - a.g.ms);
+}
+function renderGuardados() {
+  const l = listaGuardados();
+  const activos = l.filter(x => !x.vendido).length;
+  $('#badge-g').hidden = !activos; $('#badge-g').textContent = activos;
+  $('#l-guardados').innerHTML = l.length ? l.map(({ gid, g, i, ficha, vendido }) => {
+    const quien = `⭐ ${esc(g.por || 'Alguien')} · ${esc(hace(g.ms))}`;
+    const extra = (g.nota ? `<div class="nota">📝 ${esc(g.nota)}</div>` : '') + (i.bajada_de ? `<div class="drop">↓ Ha bajado desde ${eur(i.bajada_de)}</div>` : '');
+    if (ficha && ficha.precio != null && ficha.oferta != null) {
+      const c = { ...ficha, estado: vendido ? 'vendido' : 'activo', avisado_ms: null };
+      return fichaHTML(c, { gid, clase: vendido ? 'vendido' : 'estrella', tag: vendido ? 'Ya no está' : quien, extra, sinSel: true });
+    }
+    const pendiente = !i.revisado_ms;
+    return `<article class="card ${vendido ? 'vendido' : 'estrella'}"><div class="top"><span class="tag">${vendido ? 'Ya no está' : quien}</span></div>
+      <div class="head">${i.foto ? `<img class="foto" src="${esc(i.foto)}" alt="" loading="lazy" referrerpolicy="no-referrer">` : ''}<div class="txt">
+        <span class="model">${esc(i.titulo || g.modelo || 'Anuncio de Wallapop')}</span>
+        <span class="where">${i.precio ? eur(i.precio) : ''}${pendiente ? 'El bot lo está analizando (1-2 min)…' : ' · no es un modelo que el bot sepa valorar'}</span></div></div>
+      <div class="body">${extra}<div class="actions"><a class="btn main" href="${esc(i.url || g.url)}" target="_blank" rel="noopener">Abrir en Wallapop</a>
+        <button type="button" class="btn" data-comprar="${esc(gid)}">🛒 Lo hemos comprado</button>
+        <button type="button" class="btn peligro" data-quitar="${esc(gid)}">Quitar</button></div></div></article>`;
+  }).join('') : `<div class="empty"><b>Aún no habéis guardado nada.</b><br>Pulsa «☆ Guardar» en cualquier chollo del mapa o pega arriba un enlace de Wallapop.</div>`;
+}
+async function toggleGuardar(id, btn) {
+  const c = data.chollos.find(x => x.id === id);
+  const quitar = guardado(id);
+  btn && (btn.disabled = true);
+  try {
+    guardados = await cambiar('guardados.json', { items: {} }, j => {
+      j.items = j.items || {};
+      if (quitar) delete j.items[id];
+      else {
+        const snap = c ? Object.fromEntries(Object.entries(c).filter(([k]) => !['lat', 'lng'].includes(k) || true)) : {};
+        j.items[id] = { ...snap, id, wid: id, por: AJ.nombre || 'Alguien', ms: Date.now(), nota: '' };
+      }
+      return j;
+    }, `${quitar ? 'Quitar' : 'Guardar'} ${c?.modelo || id}${AJ.nombre ? ' (' + AJ.nombre + ')' : ''}`);
+    toast(quitar ? 'Quitado de guardados' : '⭐ Guardado. Le llegará un aviso a tu compañero.');
+    renderTodo();
+  } catch (e) { if (e.message !== 'sin clave') toast(e.message, true); }
+  finally { btn && (btn.disabled = false); }
+}
+async function quitarGuardado(gid) {
+  if (!confirm('¿Quitar este anuncio de guardados?')) return;
+  try { guardados = await cambiar('guardados.json', { items: {} }, j => { delete (j.items || {})[gid]; return j; }, 'Quitar guardado'); toast('Quitado'); renderTodo(); }
+  catch (e) { if (e.message !== 'sin clave') toast(e.message, true); }
+}
+$('#f-enlace').addEventListener('submit', async e => {
+  e.preventDefault();
+  const url = $('#enlace-url').value.trim(), nota = $('#enlace-nota').value.trim();
+  if (!/wallapop\.com\/item\//i.test(url)) { toast('Pega el enlace de un anuncio de Wallapop (wallapop.com/item/…)', true); return; }
+  const slug = (url.match(/\/item\/([a-z0-9-]+)/i) || [])[1];
+  const ya = data.chollos.find(c => c.url && c.url.includes(slug));
+  const btn = e.submitter; btn.disabled = true;
+  try {
+    guardados = await cambiar('guardados.json', { items: {} }, j => {
+      j.items = j.items || {};
+      const id = ya ? ya.id : 'enlace-' + Date.now();
+      j.items[id] = ya ? { ...ya, id, wid: ya.id, por: AJ.nombre || 'Alguien', ms: Date.now(), nota }
+                       : { id, url: url.split('?')[0], por: AJ.nombre || 'Alguien', ms: Date.now(), nota };
+      return j;
+    }, `Guardar enlace${AJ.nombre ? ' (' + AJ.nombre + ')' : ''}`);
+    $('#enlace-url').value = ''; $('#enlace-nota').value = '';
+    toast('⭐ Guardado. En 1-2 minutos el bot lo analiza y avisa en Telegram.');
+    renderTodo();
+    setTimeout(() => recargar(), 90000);
+  } catch (err) { if (err.message !== 'sin clave') toast(err.message, true); }
+  finally { btn.disabled = false; }
+});
+
+// ------------------------------------------------------------------ registro
+const coste = c => (num(c.precio_compra) || 0) + (c.reparaciones || []).reduce((s, r) => s + (num(r.coste) || 0), 0) + (num(c.gasolina) || 0) + (num(c.otros) || 0);
+const vendida = c => num(c.precio_venta) != null;
+const beneficio = c => vendida(c) ? num(c.precio_venta) - coste(c) : null;
+const diasEntre = (a, b) => a && b ? Math.max(0, Math.round((new Date(b) - new Date(a)) / DIA)) : null;
+function renderRegistro() {
+  const cs = (registro.compras || []).slice().sort((a, b) => vendida(a) - vendida(b) || (b.fecha_compra || '').localeCompare(a.fecha_compra || ''));
+  const vend = cs.filter(vendida), stock = cs.filter(c => !vendida(c));
+  const mes = hoyISO().slice(0, 7);
+  const total = vend.reduce((s, c) => s + beneficio(c), 0), delMes = vend.filter(c => (c.fecha_venta || '').startsWith(mes)).reduce((s, c) => s + beneficio(c), 0);
+  const dias = vend.map(c => diasEntre(c.fecha_compra, c.fecha_venta)).filter(d => d != null);
+  $('#reg-tiles').innerHTML = `
+    <div class="tile verde"><b class="${total < 0 ? 'negv' : ''}">${signo(total)}</b><span>Ganado en total</span></div>
+    <div class="tile verde"><b class="${delMes < 0 ? 'negv' : ''}">${signo(delMes)}</b><span>Este mes</span></div>
+    <div class="tile ambar"><b>${stock.length}</b><span>En stock · ${eur(stock.reduce((s, c) => s + coste(c), 0))}</span></div>
+    <div class="tile azul"><b>${vend.length ? signo(total / vend.length) : '—'}</b><span>Por móvil${dias.length ? ' · ' + Math.round(dias.reduce((a, b) => a + b, 0) / dias.length) + ' días' : ''}</span></div>`;
+  const l = cs.filter(c => S.rf === 'todos' || (S.rf === 'stock' ? !vendida(c) : vendida(c)));
+  $('#l-registro').innerHTML = l.length ? l.map(c => {
+    const ben = beneficio(c), rep = (c.reparaciones || []).reduce((s, r) => s + (num(r.coste) || 0), 0);
+    const d = diasEntre(c.fecha_compra, vendida(c) ? c.fecha_venta : hoyISO());
+    return `<article class="card ${vendida(c) ? (ben >= 0 ? 'bueno' : 'chollazo') : 'normal'}">
+      <div class="top"><span class="tag" style="background:${vendida(c) ? 'var(--bueno)' : 'var(--ofrece)'};color:#111">${vendida(c) ? `Vendido en ${d} días` : `En stock · ${d} días`}</span>
+        <span class="kind">${esc(c.quien || '')} · ${esc(fecha(c.fecha_compra))}</span></div>
+      <div class="head"><div class="txt"><span class="model">${esc(c.modelo)}${c.capacidad ? ' · ' + esc(c.capacidad) : ''}</span>
+        <span class="where">${c.estado === 'reparar' ? 'Comprado roto' : 'Comprado bien'}${c.bateria ? ` · batería ${esc(c.bateria)} %` : ''}</span></div></div>
+      <div class="nums">
+        <div><span>Pagado</span><b>${eur(c.precio_compra)}</b></div>
+        <div class="neg"><span>Reparar</span><b>${eur(rep)}</b></div>
+        <div><span>${vendida(c) ? 'Vendido' : 'Gastos'}</span><b>${vendida(c) ? eur(c.precio_venta) : eur((num(c.gasolina) || 0) + (num(c.otros) || 0))}</b></div>
+        <div class="${ben == null ? '' : ben >= 0 ? 'gan' : 'per'}"><span>Beneficio</span><b>${ben == null ? '—' : signo(ben)}</b></div>
+      </div>
+      <div class="body">
+        ${(c.reparaciones || []).length ? `<div><b>Reparaciones:</b> ${c.reparaciones.map(r => `${esc(r.pieza)} ${eur(r.coste)}`).join(' · ')}</div>` : ''}
+        ${num(c.gasolina) || num(c.otros) ? `<div>Gasolina ${eur2(num(c.gasolina) || 0)}${num(c.otros) ? ` · otros ${eur(c.otros)}` : ''} · coste total <b>${eur(coste(c))}</b></div>` : `<div>Coste total <b>${eur(coste(c))}</b></div>`}
+        ${c.notas ? `<div class="nota">📝 ${esc(c.notas)}</div>` : ''}
+        <div class="actions">
+          ${vendida(c) ? '' : `<button type="button" class="btn verde" data-vender="${esc(c.id)}">💰 Marcar vendido</button><button type="button" class="btn" data-texto="${esc(c.id)}">📝 Texto para vender</button>`}
+          <button type="button" class="btn" data-editar="${esc(c.id)}">Editar</button>
+          ${c.url ? `<a class="btn" href="${esc(c.url)}" target="_blank" rel="noopener">Anuncio</a>` : ''}
+        </div>
+      </div></article>`;
+  }).join('') : `<div class="empty"><b>${cs.length ? 'Nada en este filtro.' : 'Aún no habéis apuntado ninguna compra.'}</b><br>Cuando compréis un móvil, pulsa «🛒 Lo hemos comprado» en su ficha o «＋ Apuntar una compra».</div>`;
+}
+function fecha(iso) { if (!iso) return ''; const [y, m, d] = iso.split('-'); return `${d}/${m}/${y.slice(2)}`; }
+
+const PIEZAS = ['pantalla', 'batería', 'trasera', 'cámara', 'puerto de carga', 'altavoz', 'botón', 'Face ID', 'otra'];
+function costeRef(modelo, pieza) { const p = (estudio.piezas || {})[modelo]; return (p && p[pieza]) ?? (estudio.extras || {})[pieza]; }
+function filaRep(r = {}) {
+  const d = document.createElement('div'); d.className = 'rep-row';
+  d.innerHTML = `<select aria-label="Pieza">${PIEZAS.map(p => `<option ${p === r.pieza ? 'selected' : ''}>${p}</option>`).join('')}</select>
+    <input type="number" min="0" step="1" inputmode="decimal" aria-label="Coste en euros" placeholder="€" value="${r.coste ?? ''}">
+    <button type="button" class="icon-btn" aria-label="Quitar reparación">✕</button>`;
+  const pista = () => { const v = costeRef($('#f-compra').modelo.value.trim(), d.querySelector('select').value); d.querySelector('input').placeholder = v ? `~${v} €` : '€'; };
+  d.querySelector('select').onchange = pista; pista();
+  d.querySelector('button').onclick = () => { d.remove(); calcCompra(); };
+  d.querySelector('input').oninput = calcCompra;
+  $('#reps').append(d);
+}
+let editando = null;
+function leerCompra() {
+  const f = $('#f-compra');
+  const reps = $$('#reps .rep-row').map(r => ({ pieza: r.querySelector('select').value, coste: num(r.querySelector('input').value) })).filter(r => r.coste != null);
+  return {
+    modelo: f.modelo.value.trim(), capacidad: f.capacidad.value.trim(), bateria: num(f.bateria.value), estado: f.estado.value,
+    precio_compra: num(f.precio_compra.value), fecha_compra: f.fecha_compra.value, reparaciones: reps,
+    gasolina: num(f.gasolina.value), otros: num(f.otros.value), precio_venta: num(f.precio_venta.value),
+    fecha_venta: f.fecha_venta.value || (num(f.precio_venta.value) != null ? hoyISO() : ''), url: f.url.value.trim(), notas: f.notas.value.trim(),
+  };
+}
+function filaEstudio(modelo, tipo = 'listo') { return (estudio.modelos || []).find(r => r.modelo === modelo && r.tipo === tipo); }
+function calcCompra() {
+  const c = leerCompra(), r = filaEstudio(c.modelo);
+  const venta = c.precio_venta ?? editando?.venta_estimada ?? r?.venta_lista;
+  let h = `Coste total: <b style="color:var(--ink)">${eur(coste(c))}</b>`;
+  if (venta) h += ` · ${c.precio_venta != null ? 'beneficio' : 'beneficio esperado'} <b class="${venta - coste(c) >= 0 ? 'pos' : 'negv'}">${signo(venta - coste(c))}</b>${c.precio_venta == null ? ` (si se vende por ~${eur(venta)})` : ''}`;
+  $('#dc-calc').innerHTML = `<p style="margin:0">${h}</p>`;
+}
+function abrirCompra(c, pre = {}) {
+  editando = c || null;
+  const f = $('#f-compra'); f.reset(); $('#reps').innerHTML = '';
+  const v = { ...(c || pre) };
+  $('#dc-t').textContent = c ? 'Editar compra' : 'Apuntar compra';
+  for (const k of ['modelo', 'capacidad', 'bateria', 'estado', 'precio_compra', 'fecha_compra', 'gasolina', 'otros', 'precio_venta', 'fecha_venta', 'url', 'notas'])
+    if (f[k]) f[k].value = v[k] ?? '';
+  if (!f.fecha_compra.value) f.fecha_compra.value = hoyISO();
+  (v.reparaciones || []).forEach(filaRep);
+  $('#dc-venta').open = v.precio_venta != null && v.precio_venta !== '';
+  $('#dc-borrar').hidden = !c;
+  calcCompra();
+  $('#d-compra').showModal();
+}
+$('#add-rep').onclick = () => { filaRep(); $$('#reps .rep-row input').at(-1).focus(); };
+$('#f-compra').addEventListener('input', calcCompra);
+$('#f-compra').addEventListener('submit', async e => {
+  if (e.submitter?.value !== 'ok') return;
+  e.preventDefault();
+  const c = leerCompra();
+  if (!c.modelo || c.precio_compra == null) { toast('Pon al menos el modelo y lo que pagasteis', true); return; }
+  const btn = $('#dc-ok'); btn.disabled = true;
+  try {
+    const id = editando?.id || 'c' + Date.now();
+    const extra = editando ? {} : { id, quien: AJ.nombre || '', creado_ms: Date.now(), wid: abrirCompra.pre?.wid || null, venta_estimada: abrirCompra.pre?.venta_estimada || null };
+    registro = await cambiar('registro.json', { compras: [] }, j => {
+      j.compras = j.compras || [];
+      const i = j.compras.findIndex(x => x.id === id);
+      if (i >= 0) j.compras[i] = { ...j.compras[i], ...c }; else j.compras.push({ ...extra, ...c });
+      return j;
+    }, `${editando ? 'Editar' : 'Compra'}: ${c.modelo}`);
+    $('#d-compra').close(); toast(editando ? 'Cambios guardados' : '🛒 Compra apuntada'); abrirCompra.pre = null;
+    renderTodo();
+  } catch (err) { if (err.message !== 'sin clave') toast(err.message, true); }
+  finally { btn.disabled = false; }
+});
+$('#dc-borrar').onclick = async () => {
+  if (!editando || !confirm('¿Borrar esta compra del registro?')) return;
+  try { registro = await cambiar('registro.json', { compras: [] }, j => { j.compras = (j.compras || []).filter(x => x.id !== editando.id); return j; }, 'Borrar compra');
+        $('#d-compra').close(); toast('Borrado'); renderTodo(); }
+  catch (err) { if (err.message !== 'sin clave') toast(err.message, true); }
+};
+let vendiendo = null;
+function abrirVender(c) {
+  vendiendo = c; const f = $('#f-vender'); f.reset(); f.fecha_venta.value = hoyISO();
+  const r = filaEstudio(c.modelo);
+  $('#dv-sub').textContent = `${c.modelo}${c.capacidad ? ' ' + c.capacidad : ''} · os costó ${eur(coste(c))} en total` + (r ? ` · se suele vender por ~${eur(r.precio)}` : '');
+  const calc = () => { const p = num(f.precio_venta.value); $('#dv-calc').innerHTML = p == null ? '<p style="margin:0">Pon el precio para ver el beneficio.</p>' : `<p style="margin:0">Beneficio: <b class="big ${p - coste(c) >= 0 ? 'pos' : 'negv'}">${signo(p - coste(c))}</b></p>`; };
+  f.precio_venta.oninput = calc; calc();
+  $('#d-vender').showModal();
+}
+$('#f-vender').addEventListener('submit', async e => {
+  if (e.submitter?.value !== 'ok') return;
+  e.preventDefault();
+  const f = $('#f-vender'), p = num(f.precio_venta.value);
+  if (p == null) { toast('Pon el precio de venta', true); return; }
+  try {
+    registro = await cambiar('registro.json', { compras: [] }, j => { const x = (j.compras || []).find(x => x.id === vendiendo.id); if (x) { x.precio_venta = p; x.fecha_venta = f.fecha_venta.value || hoyISO(); } return j; }, `Venta: ${vendiendo.modelo}`);
+    $('#d-vender').close(); toast('💰 Venta apuntada'); renderTodo();
+  } catch (err) { if (err.message !== 'sin clave') toast(err.message, true); }
+});
+function textoVenta(c) {
+  const r = filaEstudio(c.modelo);
+  const reps = (c.reparaciones || []).map(x => x.pieza);
+  const bat = num(c.bateria);
+  const precio = r?.precio ?? c.venta_estimada;
+  const estado = reps.length ? 'Perfecto estado' : 'Muy buen estado';
+  const titulo = `${c.modelo}${c.capacidad ? ' ' + c.capacidad : ''}${bat ? ` · Batería ${bat}%` : ''} · ${estado}`;
+  const lineas = [
+    `Vendo ${c.modelo}${c.capacidad ? ' de ' + c.capacidad : ''} en ${estado.toLowerCase()}, funcionando todo al 100 %.`, '',
+    bat ? `🔋 Salud de batería: ${bat} %${reps.includes('batería') ? ' (batería nueva)' : ''}` : (reps.includes('batería') ? '🔋 Batería nueva' : '🔋 Batería en buen estado'),
+    reps.includes('pantalla') ? '📱 Pantalla cambiada recientemente (no original), sin rayas ni golpes' : '📱 Pantalla sin golpes',
+    reps.includes('trasera') ? '✨ Tapa trasera nueva' : null,
+    reps.filter(p => !['pantalla', 'batería', 'trasera'].includes(p)).length ? `🔧 Reparado: ${reps.filter(p => !['pantalla', 'batería', 'trasera'].includes(p)).join(', ')}` : null,
+    /iphone/i.test(c.modelo) && !/\b(se|8)\b/i.test(c.modelo) ? '🔐 Face ID funcionando' : null,
+    '✅ Libre de operador y sin cuentas (listo para configurar)',
+    '📦 Se entrega con cable de carga', '',
+    `📍 Entrega en mano en ${data.origen?.nombre || 'Fuenlabrada'} y alrededores (Madrid sur). También envío por Wallapop.`,
+    '💬 Pregunta lo que necesites. No cambios.',
+  ].filter(x => x !== null);
+  let ph = '';
+  if (precio) {
+    const rapido = Math.round(precio * 0.95 / 5) * 5, normal = Math.round(precio * 1.04 / 5) * 5;
+    ph = `<div class="panel" style="margin:0"><p style="margin:0">Precio recomendado: <b style="color:var(--ink)">${normal} €</b> (deja margen para regatear)${r?.dias != null ? ` · se suele vender en ~${r.dias} días` : ''}.<br>Para venderlo rápido: <b style="color:var(--ink)">${rapido} €</b>. ${coste(c) ? `Os costó ${eur(coste(c))}: ganaríais ${signo(normal - coste(c))} / ${signo(rapido - coste(c))}.` : ''}${r ? ` Basado en ${r.vendidos} ventas vistas.` : ''}</p></div>`;
+  } else ph = '<p class="sub" style="margin:0">Aún no hay ventas suficientes de este modelo para recomendar un precio.</p>';
+  $('#dt-precio').innerHTML = ph; $('#dt-titulo').value = titulo; $('#dt-desc').value = lineas.join('\n');
+  $('#d-texto').showModal();
+}
+$('#dt-copiar').onclick = e => copiar($('#dt-desc').value, e.target);
+$('#dt-copiar-t').onclick = e => copiar($('#dt-titulo').value, e.target);
+
+// ------------------------------------------------------------------ estudio
+function renderEstudio() {
+  const e = estudio || {};
+  const vistas = e.ventas_vistas || 0;
+  $('#est-intro').innerHTML = vistas
+    ? `El bot sigue <b style="color:var(--ink)">${e.seguidos}</b> anuncios de iPhone y ha visto venderse o retirarse <b style="color:var(--ink)">${vistas}</b>. Con cada día que pasa los precios son más fiables (cuenta lo de los últimos 4 meses).`
+    : `La memoria del mercado acaba de empezar: el bot sigue <b style="color:var(--ink)">${e.seguidos || 0}</b> anuncios de iPhone y apunta cuándo se venden. En unos días aparecerán aquí los precios reales de venta y lo que tarda cada modelo.`;
+  // vuestros números
+  const vend = (registro.compras || []).filter(vendida);
+  const porModelo = {};
+  vend.forEach(c => { (porModelo[c.modelo] = porModelo[c.modelo] || []).push(c); });
+  const ap = e.aprendido || {};
+  $('#est-nuestro').innerHTML = vend.length ? `<div class="panel"><p><b style="color:var(--ink)">Vuestros números</b> · ${vend.length} ventas${ap.ventas_propias >= 3 ? ` · el bot ajusta sus precios de venta un ${ap.ajuste_venta >= 1 ? '+' : ''}${Math.round((ap.ajuste_venta - 1) * 100)} % según lo que vendéis vosotros` : ` · con ${3 - (ap.ventas_propias || 0)} ventas más el bot empezará a ajustar sus precios a los vuestros`}</p>
+    <div class="scroll"><table class="tabla"><tr><th>Modelo</th><th class="n">Compra</th><th class="n">Venta</th><th class="n">Ganado</th><th class="n">Días</th></tr>
+    ${Object.entries(porModelo).map(([m, cs]) => { const media = f => cs.reduce((s, c) => s + f(c), 0) / cs.length; const ds = cs.map(c => diasEntre(c.fecha_compra, c.fecha_venta)).filter(x => x != null);
+      return `<tr><td>${esc(m)} <span style="color:var(--muted)">×${cs.length}</span></td><td class="n">${eur(media(coste))}</td><td class="n">${eur(media(c => num(c.precio_venta)))}</td><td class="n ${media(beneficio) >= 0 ? 'pos' : 'negv'}">${signo(media(beneficio))}</td><td class="n">${ds.length ? Math.round(ds.reduce((a, b) => a + b, 0) / ds.length) : '—'}</td></tr>`; }).join('')}
+    </table></div></div>` : '';
+  // modelos
+  let filas = (e.modelos || []).filter(r => r.tipo === S.et);
+  const ord = { vendidos: (a, b) => b.vendidos - a.vendidos, dias: (a, b) => (a.dias ?? 99) - (b.dias ?? 99), modelo: (a, b) => a.modelo.localeCompare(b.modelo, 'es', { numeric: true }) }[S.eo];
+  filas.sort(ord);
+  const maxV = Math.max(1, ...filas.map(r => r.vendidos));
+  $('#l-estudio').innerHTML = filas.length ? filas.map(r => `<div class="modelo-card">
+      <div class="t"><b>${esc(r.modelo)}</b><span>${r.vendidos} vendidos${r.confirmados ? ` (${r.confirmados} confirmados)` : ''} · ${r.en_venta} a la venta ahora</span></div>
+      <div class="barra" aria-hidden="true"><i style="width:${Math.round(r.vendidos / maxV * 100)}%"></i></div>
+      <div class="nums">
+        <div><span>Se vende por</span><b>${eur(r.precio)}</b></div>
+        <div><span>Tarda</span><b>${r.dias != null ? r.dias + ' d' : '—'}</b></div>
+        <div class="neg"><span>Compra máx</span><b>${eur(r.compra_max)}</b></div>
+        <div><span>${r.tipo === 'reparar' ? 'Reparar' : 'Batería'}</span><b>${r.tipo === 'reparar' ? eur(r.coste_reparacion) : r.bateria ? Math.round(r.bateria) + ' %' : '—'}</b></div>
+      </div>
+      <p class="sub" style="margin:8px 0 0">Rango normal ${eur(r.p25)}–${eur(r.p75)}${r.precio_en_venta ? ` · ahora piden de media ${eur(r.precio_en_venta)}` : ''}${r.no_vendidos ? ` · ${r.no_vendidos} no se vendieron en 30 días` : ''}. ${r.tipo === 'reparar' ? 'Compra máx = lo más que pagar por uno roto para ganar el mínimo tras repararlo.' : 'Compra máx = lo más que pagar para ganar el mínimo.'}</p>
+    </div>`).join('') : `<div class="empty"><b>Todavía no hay ventas ${S.et === 'listo' ? 'de móviles funcionando' : 'de móviles rotos'}.</b><br>El bot las irá apuntando a medida que se vendan los anuncios que sigue.</div>`;
+  // últimas ventas
+  const ult = e.ultimas || [];
+  $('#t-ultimas').innerHTML = ult.length ? `<tr><th>Modelo</th><th>Estado</th><th class="n">Batería</th><th>Reparación</th><th class="n">Precio</th><th class="n">Días</th></tr>`
+    + ult.slice(0, 120).map(v => `<tr><td>${esc(v.modelo)}${v.cap ? ` <span style="color:var(--muted)">${esc(v.cap)}</span>` : ''}<br><span style="color:var(--faint);font-size:12px">${esc(v.zona || '')} · ${v.como === 'vendido' ? 'vendido' : 'retirado'} ${esc(hace(v.fin))}</span></td>
+      <td>${v.tipo === 'listo' ? 'Bien' : 'Roto'}</td><td class="n">${v.bateria ? v.bateria + ' %' : '—'}</td>
+      <td>${v.averias.length ? v.averias.map(a => `${esc(a.pieza)} ~${eur(a.coste)}`).join('<br>') : '—'}</td>
+      <td class="n">${eur(v.precio)}${v.precio_inicial && v.precio_inicial > v.precio ? `<br><span style="color:var(--faint);font-size:12px">pedía ${eur(v.precio_inicial)}</span>` : ''}</td><td class="n">${v.dias}</td></tr>`).join('')
+    : '<tr><td class="sub">Aún no se ha detectado ninguna venta.</td></tr>';
+  // piezas
+  const reales = {}; (ap.costes_reales || []).forEach(x => { (reales[x.modelo] = reales[x.modelo] || {})[x.pieza] = x; });
+  const pz = e.piezas || {};
+  const mods = Object.keys(pz);
+  $('#t-piezas').innerHTML = mods.length ? `<tr><th>Modelo</th><th class="n">Pantalla</th><th class="n">Batería</th><th class="n">Trasera</th></tr>` + mods.map(m => `<tr><td>${esc(m)}</td>${['pantalla', 'batería', 'trasera'].map(k => {
+      const r = reales[m]?.[k]; return `<td class="n">${r ? `<b class="pos">${eur(r.coste)}</b><br><span style="color:var(--faint);font-size:11.5px">vuestro (×${r.veces})</span>` : eur(pz[m][k])}</td>`; }).join('')}</tr>`).join('')
+    + `<tr><td colspan="4" class="sub">Otras: ${Object.entries(e.extras || {}).map(([k, v]) => `${esc(k)} ~${eur(v)}`).join(' · ')}</td></tr>`
+    : '<tr><td class="sub">Aparecerán cuando haya modelos en el estudio.</td></tr>';
+}
+
+// ------------------------------------------------------------------ gasolina
+let destinoFijo = null;
+function renderGasolina() {
+  $('#aj-consumo').value = AJ.consumo; $('#aj-litro').value = AJ.litro;
+  const filas = data.chollos.filter(c => c.estado !== 'vendido' && c.km != null).sort((a, b) => a.km - b.km).slice(0, 40);
+  $('#t-gas').innerHTML = filas.length ? `<tr><th>Chollo</th><th class="n">Km ida</th><th class="n">Gasolina</th><th class="n">Ganas</th></tr>` + filas.map(c => {
+    const g = gasolina(c.km); return `<tr><td><a href="#${esc(c.id)}">${esc(c.modelo)}</a> · ${eur(c.precio)}<br><span style="color:var(--faint);font-size:12px">${esc(c.zona || '')}</span></td><td class="n">~${Math.round(c.km * AJ.factor)}</td><td class="n">${eur2(g.euros)}</td><td class="n ${c.beneficio - g.euros >= 0 ? 'pos' : 'negv'}">${signo(c.beneficio - g.euros)}</td></tr>`; }).join('')
+    + `<tr><td colspan="4" class="sub">«Ganas» ya descuenta la gasolina de ida y vuelta.</td></tr>` : '<tr><td class="sub">No hay chollos activos ahora mismo.</td></tr>';
+  $('#gas-lista').innerHTML = [...data.chollos.filter(c => c.zona).map(c => c.zona)].filter((v, i, a) => a.indexOf(v) === i).map(z => `<option value="${esc(z)}">`).join('');
+}
+$('#aj-consumo').oninput = e => { const v = num(e.target.value); if (v) { AJ.consumo = v; guardarAjustes(); renderTodo(['gas']); } };
+$('#aj-litro').oninput = e => { const v = num(e.target.value); if (v) { AJ.litro = v; guardarAjustes(); renderTodo(['gas']); } };
+async function geocodificar(q) {
+  const u = 'https://nominatim.openstreetmap.org/search?' + new URLSearchParams({ format: 'json', limit: 1, countrycodes: 'es', 'accept-language': 'es', viewbox: '-4.6,40.95,-3.0,39.85', q });
+  const r = await fetch(u); const j = await r.json(); if (!j.length) throw new Error('No encuentro ese sitio. Prueba con el pueblo o barrio.');
+  return { lat: +j[0].lat, lng: +j[0].lon, nombre: j[0].display_name.split(',').slice(0, 3).join(',') };
+}
+async function ruta(dest) {
+  try {
+    const r = await fetch(`https://router.project-osrm.org/route/v1/driving/${homeLL[1]},${homeLL[0]};${dest.lng},${dest.lat}?overview=false`);
+    const j = await r.json(); if (j.routes?.length) return { km: j.routes[0].distance / 1000, min: j.routes[0].duration / 60, exacta: true };
+  } catch (e) {}
+  const R = 6371, dLa = (dest.lat - homeLL[0]) * Math.PI / 180, dLo = (dest.lng - homeLL[1]) * Math.PI / 180;
+  const a = Math.sin(dLa / 2) ** 2 + Math.cos(homeLL[0] * Math.PI / 180) * Math.cos(dest.lat * Math.PI / 180) * Math.sin(dLo / 2) ** 2;
+  return { km: 2 * R * Math.asin(Math.sqrt(a)) * AJ.factor, min: null, exacta: false };
+}
+$('#f-gas').addEventListener('submit', async e => {
+  e.preventDefault();
+  const q = $('#gas-destino').value.trim(); if (!q) return;
+  const res = $('#gas-res'); res.innerHTML = '<p style="margin-top:12px">Calculando…</p>';
+  try {
+    const dest = destinoFijo && destinoFijo.q === q ? destinoFijo : await geocodificar(/madrid/i.test(q) ? q : q + ', Comunidad de Madrid');
+    const r = await ruta(dest), ida = r.km, total = ida * 2, litros = total * AJ.consumo / 100, euros = litros * AJ.litro;
+    res.innerHTML = `<p style="margin:12px 0 0">${esc(dest.nombre || q)}</p><div class="resultado">
+      <div class="tile rojo"><b>${eur2(euros)}</b><span>Gasolina ida y vuelta</span></div>
+      <div class="tile azul"><b>${Math.round(total)} km</b><span>${Math.round(ida)} km de ida${r.min ? ' · ' + Math.round(r.min) + ' min' : ''}</span></div>
+      <div class="tile ambar"><b>${litros.toFixed(1).replace('.', ',')} l</b><span>a ${AJ.consumo} l/100 km</span></div>
+      <div class="tile"><b>${eur2(euros / 2)}</b><span>Solo ida</span></div></div>
+      <p class="sub" style="margin:8px 0 0">${r.exacta ? 'Ruta por carretera más rápida (OpenStreetMap).' : 'Aproximado: no se pudo calcular la ruta exacta.'}</p>`;
+  } catch (err) { res.innerHTML = `<p style="margin-top:12px;color:#FF8A94">${esc(err.message)}</p>`; }
+});
+
+// ------------------------------------------------------------------ pestañas y eventos
+function irA(tab, sinScroll) {
+  S.tab = tab; saveS();
+  $$('[data-vista]').forEach(s => s.hidden = s.dataset.vista !== tab);
+  $$('[data-tab]').forEach(b => b.toggleAttribute('aria-current', b.dataset.tab === tab) || b.setAttribute('aria-current', b.dataset.tab === tab ? 'page' : 'false'));
+  $$('[data-tab]').forEach(b => b.dataset.tab === tab ? b.setAttribute('aria-current', 'page') : b.removeAttribute('aria-current'));
+  if (tab === 'mapa' && map) setTimeout(() => map.invalidateSize(), 50);
+  if (!sinScroll) scrollTo({ top: 0 });
+  if (tab !== 'mapa' && location.hash.slice(1) !== tab) history.replaceState(null, '', '#' + tab);
+  if (tab === 'mapa' && ['guardados', 'registro', 'estudio', 'gasolina'].includes(location.hash.slice(1))) history.replaceState(null, '', location.pathname);
+}
+$$('[data-tab]').forEach(b => b.onclick = () => irA(b.dataset.tab));
+function syncControls() {
+  $$('[data-fam]').forEach(b => b.setAttribute('aria-pressed', b.dataset.fam === S.fam));
+  $$('[data-tipo]').forEach(b => b.setAttribute('aria-pressed', b.dataset.tipo === S.tipo));
+  $$('[data-niv]').forEach(b => b.setAttribute('aria-pressed', b.dataset.niv === S.niv));
+  $$('[data-rf]').forEach(b => b.setAttribute('aria-pressed', b.dataset.rf === S.rf));
+  $$('[data-et]').forEach(b => b.setAttribute('aria-pressed', b.dataset.et === S.et));
+  $('#km').value = S.km; $('#kmv').textContent = S.km + ' km'; $('#orden').value = S.orden; $('#vend').checked = S.vend; $('#est-orden').value = S.eo;
+}
+const cambio = (k, v, que) => { S[k] = v; saveS(); syncControls(); renderTodo(que); };
+$$('[data-fam]').forEach(b => b.onclick = () => cambio('fam', b.dataset.fam, ['mapa']));
+$$('[data-tipo]').forEach(b => b.onclick = () => cambio('tipo', b.dataset.tipo, ['mapa']));
+$$('[data-niv]').forEach(b => b.onclick = () => cambio('niv', S.niv === b.dataset.niv ? 'todos' : b.dataset.niv, ['mapa']));
+$$('[data-rf]').forEach(b => b.onclick = () => cambio('rf', b.dataset.rf, ['reg']));
+$$('[data-et]').forEach(b => b.onclick = () => cambio('et', b.dataset.et, ['est']));
+$('#km').oninput = e => { S.km = +e.target.value; $('#kmv').textContent = S.km + ' km'; saveS(); renderTodo(['mapa']); };
+$('#orden').onchange = e => cambio('orden', e.target.value, ['mapa']);
+$('#vend').onchange = e => cambio('vend', e.target.checked, ['mapa']);
+$('#est-orden').onchange = e => cambio('eo', e.target.value, ['est']);
+$('#btn-nueva').onclick = () => { abrirCompra.pre = null; abrirCompra(null); };
+$$('[data-cerrar]').forEach(b => b.onclick = () => b.closest('dialog').close());
+
+document.addEventListener('click', async e => {
+  const t = e.target.closest('[data-fly],[data-copiar],[data-guardar],[data-quitar],[data-comprar],[data-vender],[data-texto],[data-editar]');
+  if (!t) return;
+  const d = t.dataset;
+  if (d.fly) { select(d.fly); $('#map').scrollIntoView({ block: 'start' }); }
+  else if (d.copiar != null) copiar(d.copiar, t);
+  else if (d.guardar) toggleGuardar(d.guardar, t);
+  else if (d.quitar) quitarGuardado(d.quitar);
+  else if (d.comprar) {
+    const g = (guardados.items || {})[d.comprar], i = info[d.comprar] || {};
+    const c = data.chollos.find(x => x.id === d.comprar) || data.chollos.find(x => x.id === g?.wid) || i.ficha || g || {};
+    const gas = gasolina(c.km);
+    abrirCompra.pre = { wid: c.id || i.wid || null, venta_estimada: c.venta || null };
+    abrirCompra(null, { modelo: c.modelo || i.titulo || '', capacidad: c.capacidad || '', bateria: c.bateria ?? '', estado: c.tipo || 'listo',
+      precio_compra: c.oferta ?? c.precio ?? i.precio ?? '', gasolina: gas ? Math.round(gas.euros * 10) / 10 : '', url: c.url || i.url || g?.url || '',
+      reparaciones: (c.reparacion || []).map(r => { const m = r.match(/^(pantalla|batería|cámara|puerto de carga|altavoz|botón)|trasera|tapa|carcasa/i); const p = m ? (/(trasera|tapa|carcasa)/i.test(m[0]) ? 'trasera' : m[0].toLowerCase()) : 'otra'; const n = r.match(/(\d+) €/); return { pieza: p, coste: n ? +n[1] : null }; }) });
+  }
+  else if (d.vender) abrirVender(registro.compras.find(x => x.id === d.vender));
+  else if (d.texto) textoVenta(registro.compras.find(x => x.id === d.texto));
+  else if (d.editar) abrirCompra(registro.compras.find(x => x.id === d.editar));
+});
+window.addEventListener('hashchange', () => abrirHash());
+function abrirHash() {
+  const h = decodeURIComponent(location.hash.slice(1));
+  if (['guardados', 'registro', 'estudio', 'gasolina', 'mapa'].includes(h)) irA(h);
+  else if (h && data.chollos.some(c => c.id === h)) select(h);
+}
+
+// ajustes
+function abrirAjustes(msg) {
+  const f = $('#f-ajustes'); f.nombre.value = AJ.nombre; f.token.value = AJ.token; $('#da-res').textContent = '';
+  $('#da-aviso').textContent = msg || ''; $('#da-aviso').hidden = !msg;
+  $('#d-ajustes').showModal();
+}
+$('#btn-ajustes').onclick = () => abrirAjustes();
+$('#da-probar').onclick = async () => {
+  const f = $('#f-ajustes'), viejo = AJ.token; AJ.token = f.token.value.trim(); $('#da-res').textContent = 'Probando…';
+  try { const r = await fetch(`https://api.github.com/repos/${REPO.owner}/${REPO.repo}`, { headers: { Authorization: `Bearer ${AJ.token}` }, cache: 'no-store' });
+    const j = await r.json(); $('#da-res').textContent = r.ok ? (j.permissions?.push === false ? '⚠️ La clave lee pero no puede escribir: dale permiso «Contents: Read and write».' : '✅ Conectado con ' + j.full_name) : '❌ La clave no funciona (' + r.status + ')'; }
+  catch (e) { $('#da-res').textContent = '❌ Sin conexión'; }
+  finally { AJ.token = viejo; }
+};
+$('#f-ajustes').addEventListener('submit', e => {
+  if (e.submitter?.value !== 'ok') return;
+  const f = e.target; AJ.nombre = f.nombre.value.trim(); AJ.token = f.token.value.trim(); guardarAjustes();
+  toast('Ajustes guardados'); recargar();
+});
+
+// ------------------------------------------------------------------ carga
+function renderTodo(que = ['mapa', 'guard', 'reg', 'est', 'gas']) {
+  if (que.includes('mapa')) renderMapa();
+  renderGuardados();
+  if (que.includes('reg')) renderRegistro();
+  if (que.includes('est')) renderEstudio();
+  if (que.includes('gas')) renderGasolina();
+}
+async function recargar(first) {
+  const [d, e, i] = await Promise.all([pages('chollos.json', null), pages('estudio.json', {}), pages('guardados_info.json', {}), cargarPropios()]);
+  if (!d) { $('#updated').textContent = 'No se pudieron cargar los datos'; return; }
+  data = d; estudio = e || {}; info = i || {};
+  if (data.origen) { homeLL = [data.origen.lat, data.origen.lng]; $$('.orig').forEach(x => x.textContent = data.origen.nombre); }
+  const act = data.chollos.filter(c => c.estado !== 'vendido').length;
+  $('#updated').textContent = `${act} chollo${act === 1 ? '' : 's'} activo${act === 1 ? '' : 's'} · actualizado ${hace(data.actualizado_ms)}${AJ.nombre ? ' · ' + AJ.nombre : ''}`;
+  const modelos = new Set(['iPhone SE', 'iPhone XR', 'iPhone XS', 'iPhone 11', 'iPhone 11 Pro', 'iPhone 11 Pro Max', 'iPhone 12', 'iPhone 12 mini', 'iPhone 12 Pro', 'iPhone 12 Pro Max', 'iPhone 13', 'iPhone 13 mini', 'iPhone 13 Pro', 'iPhone 13 Pro Max', 'iPhone 14', 'iPhone 14 Plus', 'iPhone 14 Pro', 'iPhone 14 Pro Max', 'iPhone 15', 'iPhone 15 Plus', 'iPhone 15 Pro', 'iPhone 15 Pro Max', 'iPhone 16', 'iPhone 16e', 'iPhone 16 Plus', 'iPhone 16 Pro', 'iPhone 16 Pro Max', 'iPhone 17', 'iPhone 17 Pro', 'iPhone 17 Pro Max', ...data.chollos.map(c => c.modelo)]);
+  $('#lista-modelos').innerHTML = [...modelos].map(m => `<option value="${esc(m)}">`).join('');
+  renderTodo();
+  if (first) { const h = location.hash.slice(1); if (h && data.chollos.some(c => c.id === decodeURIComponent(h))) setTimeout(() => select(decodeURIComponent(h)), 300); else { if (h) abrirHash(); encuadrar(); } }
+}
+
+map = L.map('map', { zoomControl: true, attributionControl: true, maxZoom: 16 }).setView(homeLL, 10);
+const tileUrl = n => `https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_${n}/MapServer/tile/{z}/{y}/{x}`;
+L.tileLayer(tileUrl('Base'), { maxZoom: 16, attribution: 'Mapa: Esri, HERE, Garmin, © OpenStreetMap' }).addTo(map);
+L.tileLayer(tileUrl('Reference'), { maxZoom: 16 }).addTo(map);
+L.marker(homeLL, { icon: L.divIcon({ className: '', html: '<div class="home"></div>', iconSize: [16, 16] }), zIndexOffset: 2000 }).bindPopup('Fuenlabrada (punto de partida)').addTo(map);
+const Encuadre = L.Control.extend({ options: { position: 'bottomright' }, onAdd() { const b = L.DomUtil.create('button', 'btn'); b.type = 'button'; b.textContent = 'Ver todos'; L.DomEvent.disableClickPropagation(b); b.onclick = encuadrar; return b; } });
+new Encuadre().addTo(map);
+layer = L.layerGroup().addTo(map);
+$('#lg-1').innerHTML = ICO.apple + '420'; $('#lg-2').innerHTML = ICO.apple + '310'; $('#lg-3').innerHTML = ICO.android + '180';
+$('#lg-4').innerHTML = ICO.apple + '150 ?'; $('#lg-5').innerHTML = ICO.apple + '90 ' + ICO.reparar;
+syncControls();
+irA(['guardados', 'registro', 'estudio', 'gasolina'].includes(location.hash.slice(1)) ? location.hash.slice(1) : (location.hash.length > 1 ? 'mapa' : S.tab), true);
+recargar(true);
+setInterval(() => { if (!document.querySelector('dialog[open]')) recargar(); }, 5 * 60 * 1000);
+</script>
+</body>
+</html>

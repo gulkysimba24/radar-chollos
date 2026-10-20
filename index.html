@@ -186,6 +186,17 @@ details p { margin: 6px 0; }
 .form .hint { font-weight: 500; color: var(--faint); font-size: 12px; }
 .rep-row { display: grid; grid-template-columns: 1fr 96px 42px; gap: 8px; align-items: center; }
 .rep-row select { width: 100%; min-height: 42px; background: var(--bg); }
+.niveles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin: 8px 14px 0 18px; }
+.niveles div { border-radius: 9px; padding: 6px 8px; border: 1px solid; min-width: 0; }
+.niveles span { display: block; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.niveles b { font: 800 19px/1.1 "Barlow Condensed", sans-serif; }
+.niveles .v { background: rgba(35,195,138,.1); border-color: rgba(35,195,138,.4); color: #7DE3BD; }
+.niveles .a { background: rgba(245,165,36,.08); border-color: rgba(245,165,36,.35); color: #F7C873; }
+.niveles .r { background: rgba(255,70,85,.08); border-color: rgba(255,70,85,.35); color: #FF9AA3; }
+.modelo-card .niveles { margin: 8px 0 0; }
+.fiab { display: inline-flex; align-items: center; gap: 4px; font-size: 11.5px; font-weight: 800; padding: 2px 8px; border-radius: 999px; }
+.fiab.alta { background: rgba(35,195,138,.15); color: #7DE3BD; } .fiab.media { background: rgba(245,165,36,.15); color: #F7C873; } .fiab.baja { background: rgba(255,140,60,.15); color: #FFB27A; }
+.caps { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
 .big { font: 800 34px/1 "Barlow Condensed", sans-serif; }
 .resultado { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-top: 12px; }
 .pos { color: var(--bueno) !important; } .negv { color: var(--chollazo) !important; }
@@ -329,6 +340,7 @@ dialog .df .btn { flex: 1; }
       <div class="row"><label for="est-orden">Ordenar <select id="est-orden"><option value="vendidos">Más vendidos</option><option value="dias">Se venden antes</option><option value="modelo">Modelo</option></select></label></div>
     </div>
     <div class="list" id="l-estudio"></div>
+    <div id="est-condicion"></div>
     <h3>Últimas ventas detectadas</h3>
     <p class="sub">Anuncios que el bot seguía y se han vendido o retirado: modelo, si estaba roto, batería, qué había que reparar y cuánto cuesta cada pieza.</p>
     <div id="t-ultimas"></div>
@@ -595,10 +607,13 @@ function fichaHTML(c, o = {}) {
   const g = gasolina(c.km);
   const chips = [
     g ? `<span class="chip">⛽ <b>${eur2(g.euros)}</b> ida y vuelta</span>` : '',
-    c.dias_venta != null ? `<span class="chip">⏱️ se vende en <b>~${c.dias_venta} días</b></span>` : '',
+    c.dias_venta != null ? `<span class="chip">⏱️ se vende en <b>~${String(c.dias_venta).replace('.', ',')} días</b></span>` : '',
     c.bateria ? `<span class="chip">🔋 <b>${c.bateria} %</b></span>` : '',
-    c.fuente_venta ? `<span class="chip">📊 precio según ${esc(c.fuente_venta)}</span>` : '',
   ].join('');
+  const niveles = c.precio_bueno != null ? `<div class="niveles" aria-label="Cuánto pagar">
+      ${c.precio_bueno < c.max ? `<div class="v"><span>🟢 Buena</span><b>≤ ${eur(c.precio_bueno)}</b></div>` : ''}
+      <div class="a"><span>🟡 Máximo</span><b>${eur(c.max)}</b></div>
+      <div class="r"><span>🔴 Tope</span><b>${eur(c.limite)}</b></div></div>` : '';
   const on = guardado(c.id);
   return `<article class="card ${k} ${S.sel === c.id && !o.sinSel ? 'sel' : ''}" ${o.sinSel ? '' : `id="c-${esc(c.id)}"`}>
     <div class="top"><span class="tag">${o.tag || (vend ? 'Vendido' : CAT_TXT[cat(c)])}</span>
@@ -612,12 +627,14 @@ function fichaHTML(c, o = {}) {
       <div><span>Máximo</span><b>${eur(c.max)}</b></div>
       <div class="gan"><span>Ganas</span><b>${c.beneficio > 0 ? '+' : ''}${eur(c.beneficio)}</b></div>
     </div>
+    ${niveles}
     <div class="body">
       ${o.extra || ''}${bajada}${vend ? '' : aviso(c)}
       ${chips ? `<div class="chips">${chips}</div>` : ''}
       <div>${esc(c.resumen)}</div>
       ${c.reparacion && c.reparacion.length ? `<div><b>Reparación:</b> ${esc(c.reparacion.join(', '))}</div>` : ''}
-      <div><b>Se vende por</b> ~${eur(c.venta)}</div>
+      <div>${c.venta_rango ? `<b>Se vende entre ${eur(c.venta_rango[0])} y ${eur(c.venta_rango[1])}</b> (normal ~${eur(c.venta)})` : `<b>Se vende por</b> ~${eur(c.venta)}`}
+        ${c.fiabilidad ? ` <span class="fiab ${c.fiabilidad}">fiabilidad ${c.fiabilidad}</span>` : ''}${c.fuente_venta ? `<br><span style="color:var(--faint);font-size:12.5px">Según ${esc(c.fuente_venta)}${c.factor_estado && Math.abs(c.factor_estado - 1) > 0.005 ? ` · ajustado por su estado (${c.factor_estado > 1 ? '+' : ''}${Math.round((c.factor_estado - 1) * 100)} %)` : ''}</span>` : ''}</div>
       ${(c.preguntas || []).length ? `<details ${S.sel === c.id ? 'open' : ''}><summary>Qué preguntar</summary><ul>${c.preguntas.map(p => `<li>${esc(p)}</li>`).join('')}</ul></details>` : ''}
       ${c.mensaje ? `<details><summary>Cómo regatear</summary><p>${esc(c.regateo)}</p><div class="msg">${esc(c.mensaje)}</div>
         <p><button type="button" class="btn" data-copiar="${esc(c.mensaje)}">Copiar mensaje</button></p></details>` : ''}
@@ -889,7 +906,11 @@ function textoVenta(c) {
   const r = filaEstudio(c.modelo);
   const reps = (c.reparaciones || []).map(x => x.pieza);
   const bat = num(c.bateria);
-  const precio = r?.precio ?? c.venta_estimada;
+  const fx = (estudio.condicion || estudio.aprendido?.condicion)?.factores;
+  const tb = bat ? (bat >= 90 ? '90+' : bat >= 85 ? '85-89' : bat >= 80 ? '80-84' : '<80') : (reps.includes('batería') ? '90+' : '?');
+  const fEst = fx ? fx.bat[reps.includes('batería') ? '90+' : tb] : 1;
+  const capR = (r?.caps || []).find(x => x.cap && c.capacidad && x.cap.replace(/\s/g, '').toLowerCase() === c.capacidad.replace(/\s/g, '').toLowerCase());
+  const precio = capR ? capR.media * fEst : r?.precio ? r.precio * fEst : c.venta_estimada;
   const estado = reps.length ? 'Perfecto estado' : 'Muy buen estado';
   const titulo = `${c.modelo}${c.capacidad ? ' ' + c.capacidad : ''}${bat ? ` · Batería ${bat}%` : ''} · ${estado}`;
   const lineas = [
@@ -906,8 +927,15 @@ function textoVenta(c) {
   ].filter(x => x !== null);
   let ph = '';
   if (precio) {
-    const rapido = Math.round(precio * 0.95 / 5) * 5, normal = Math.round(precio * 1.04 / 5) * 5;
-    ph = `<div class="panel" style="margin:0"><p style="margin:0">Precio recomendado: <b style="color:var(--ink)">${normal} €</b> (deja margen para regatear)${r?.dias != null ? ` · se suele vender en ~${r.dias} días` : ''}.<br>Para venderlo rápido: <b style="color:var(--ink)">${rapido} €</b>. ${coste(c) ? `Os costó ${eur(coste(c))}: ganaríais ${signo(normal - coste(c))} / ${signo(rapido - coste(c))}.` : ''}${r ? ` Basado en ${r.vendidos} ventas vistas.` : ''}</p></div>`;
+    const vel = r?.velocidad, base = r?.precio || precio;
+    const rapido = Math.round((vel ? vel.rapido.precio / base * precio : precio * 0.95) / 5) * 5;
+    const paciente = Math.round((vel ? vel.paciente.precio / base * precio : precio * 1.06) / 5) * 5;
+    const anuncio = Math.round(paciente * 1.04 / 5) * 5;
+    const gan = v => coste(c) ? ` · ganáis <b class="${v - coste(c) >= 0 ? 'pos' : 'negv'}">${signo(v - coste(c))}</b>` : '';
+    ph = `<div class="panel" style="margin:0"><p style="margin:0 0 6px">💡 <b style="color:var(--ink)">Publícalo a ${anuncio} €</b> (deja margen para regatear) y no bajes de lo que necesites:</p>
+      <p style="margin:0">⚡ Venta rápida: <b style="color:var(--ink)">${rapido} €</b>${vel ? ` · ~${String(vel.rapido.dias).replace('.', ',')} días` : ''}${gan(rapido)}<br>
+      🐢 Sacando más: <b style="color:var(--ink)">${paciente} €</b>${vel ? ` · ~${String(vel.paciente.dias).replace('.', ',')} días` : ''}${gan(paciente)}</p>
+      <p style="margin:6px 0 0;font-size:12.5px">${r ? `Basado en ${capR ? capR.n + ' ventas del ' + esc(c.modelo) + ' de ' + esc(capR.cap) : r.vendidos + ' ventas del ' + esc(c.modelo)}${fEst !== 1 ? `, ajustado por la batería (${fEst > 1 ? '+' : ''}${Math.round((fEst - 1) * 100)} %)` : ''}.` : 'Aún sin ventas reales de este modelo: precio orientativo.'}</p></div>`;
   } else ph = '<p class="sub" style="margin:0">Aún no hay ventas suficientes de este modelo para recomendar un precio.</p>';
   $('#dt-precio').innerHTML = ph; $('#dt-titulo').value = titulo; $('#dt-desc').value = lineas.join('\n');
   $('#d-texto').showModal();
@@ -939,16 +967,27 @@ function renderEstudio() {
   filas.sort(ord);
   const maxV = Math.max(1, ...filas.map(r => r.vendidos));
   $('#l-estudio').innerHTML = filas.length ? filas.map(r => `<div class="modelo-card">
-      <div class="t"><b>${esc(r.modelo)}</b><span>${r.vendidos} vendidos${r.confirmados ? ` (${r.confirmados} confirmados)` : ''} · ${r.en_venta} a la venta ahora</span></div>
+      <div class="t"><b>${esc(r.modelo)} <span class="fiab ${r.fiab || 'baja'}">${r.fiab || 'baja'}</span></b><span>${r.vendidos} vendidos${r.confirmados ? ` (${r.confirmados} confirmados)` : ''} · ${r.en_venta} a la venta ahora</span></div>
       <div class="barra" aria-hidden="true"><i style="width:${Math.round(r.vendidos / maxV * 100)}%"></i></div>
-      <div class="nums">
-        <div><span>Venta</span><b>${eur(r.precio)}</b></div>
-        <div><span>Tarda</span><b>${r.dias != null ? r.dias + ' d' : '—'}</b></div>
-        <div class="neg"><span>Máximo</span><b>${eur(r.compra_max)}</b></div>
-        <div><span>${r.tipo === 'reparar' ? 'Reparar' : 'Batería'}</span><b>${r.tipo === 'reparar' ? eur(r.coste_reparacion) : r.bateria ? Math.round(r.bateria) + ' %' : '—'}</b></div>
+      <div class="nums n3">
+        <div><span>${r.tipo === 'reparar' ? 'Roto se vende' : 'Se vende'}</span><b>${eur(r.p25)}–${eur(r.p75)}</b></div>
+        <div><span>Tarda</span><b>${r.dias != null ? String(r.dias).replace('.', ',') + ' días' : '—'}</b></div>
+        <div><span>${r.tipo === 'reparar' ? 'Reparar' : 'Batería media'}</span><b>${r.tipo === 'reparar' ? eur(r.coste_reparacion) : r.bateria ? Math.round(r.bateria) + ' %' : '—'}</b></div>
       </div>
-      <p class="sub" style="margin:8px 0 0">Rango normal ${eur(r.p25)}–${eur(r.p75)}${r.precio_en_venta ? ` · ahora piden de media ${eur(r.precio_en_venta)}` : ''}${r.no_vendidos ? ` · ${r.no_vendidos} no se vendieron en 30 días` : ''}. ${r.tipo === 'reparar' ? 'Máximo = lo más que pagar por uno roto para ganar el mínimo tras repararlo.' : 'Máximo = lo más que pagar para ganar el mínimo.'}</p>
+      ${r.compra_max != null ? `<div class="niveles">
+        <div class="v"><span>🟢 Buena</span><b>≤ ${eur(r.compra_buena)}</b></div>
+        <div class="a"><span>🟡 Máximo</span><b>${eur(r.compra_max)}</b></div>
+        <div class="r"><span>🔴 Tope</span><b>${eur(r.compra_limite)}</b></div></div>` : ''}
+      ${(r.caps || []).length ? `<div class="caps">${r.caps.map(c => `<span class="chip">${esc(c.cap)}: <b>${eur(c.baja)}–${eur(c.alta)}</b> (${c.n})</span>`).join('')}</div>` : ''}
+      ${r.velocidad ? `<p class="sub" style="margin:8px 0 0">⚡ A ~${eur(r.velocidad.rapido.precio)} se vende en ~${String(r.velocidad.rapido.dias).replace('.', ',')} días · 🐢 a ~${eur(r.velocidad.paciente.precio)} tarda ~${String(r.velocidad.paciente.dias).replace('.', ',')} días</p>` : ''}
+      <p class="sub" style="margin:6px 0 0">${r.precio_en_venta ? `Ahora piden de media ${eur(r.precio_en_venta)}. ` : ''}${r.no_vendidos ? `${r.no_vendidos} no se vendieron en 30 días. ` : ''}${r.tipo === 'reparar' ? 'Precios de compra de uno roto para ganar el mínimo tras repararlo y venderlo' : 'Precios de compra para un móvil en estado normal (batería 85–89 %, sin marcas)'}: 🟢 ganas aunque lo vendas barato, 🟡 ganas vendiéndolo a precio normal, 🔴 tope: a partir de ahí pierdes.</p>
     </div>`).join('') : `<div class="empty"><b>Todavía no hay ventas ${S.et === 'listo' ? 'de móviles funcionando' : 'de móviles rotos'}.</b><br>El bot las irá apuntando a medida que se vendan los anuncios que sigue.</div>`;
+  const cond = e.condicion || e.aprendido?.condicion;
+  const fx = cond?.factores;
+  const pct = v => (v >= 1 ? '+' : '') + Math.round((v - 1) * 100) + ' %';
+  $('#est-condicion').innerHTML = fx ? `<div class="panel"><p><b style="color:var(--ink)">Cuánto cambia el precio según el estado</b> · ${cond.aprendido && Object.keys(cond.aprendido).length ? 'aprendido de las ventas reales' : 'valores iniciales, se ajustan solos cuando haya ventas'}</p>
+    <div class="chips">${[['90+', 'Batería 90 % o más'], ['85-89', 'Batería 85–89 %'], ['80-84', 'Batería 80–84 %'], ['<80', 'Batería bajo 80 %'], ['?', 'Batería sin decir']].map(([k, t]) => `<span class="chip">${t}: <b>${pct(fx.bat[k])}</b></span>`).join('')}
+    <span class="chip">Con marcas: <b>${pct(fx.marcas)}</b></span><span class="chip">Con caja o factura: <b>${pct(fx.caja)}</b></span></div></div>` : '';
   // últimas ventas
   const ult = e.ultimas || [];
   $('#t-ultimas').innerHTML = ult.length ? ult.slice(0, verUltimas).map(v => `<div class="venta-row"><div>

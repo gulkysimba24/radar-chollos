@@ -63,14 +63,65 @@ def anotar_precio(precios, nombre, item_id, precio, cap):
 VENTAS = []          # ventas vistas por la memoria del mercado (se cargan en ejecutar)
 
 
-def poner_venta(a):
-    """Si hay bastantes ventas reales de este modelo, el bot usa ese precio en vez del de los anuncios."""
-    v, n = mercado.venta_real(VENTAS, a['modelo'], a.get('capacidad'))
-    a['venta_real'] = v * 0.97 if v else None          # un poco menos: el último precio suele regatearse
-    a['fuente_venta'] = f'{n} ventas reales' if v else None
+def pedidos(precios, nombre, cap):
+    """Cuartiles de lo que piden los anuncios sin daños (plan B mientras no hay ventas reales)."""
+    lista = precios.get(nombre, [])
+    misma = sorted(x[1] for x in lista if cap and x[3] == cap)
+    todos = sorted(x[1] for x in lista)
+    ps = misma if len(misma) >= 6 else todos if len(todos) >= 6 else None
+    if not ps:
+        return None
+    return mercado._q(ps, .25), statistics.median(ps), mercado._q(ps, .75), len(ps)
+
+
+def poner_venta(a, precios):
+    """Precio y rango de venta para este anuncio, según su estado (batería, marcas, caja).
+
+    Usa las ventas reales vistas si hay bastantes; si no, lo que piden otros anuncios con descuento."""
+    est = a['est']
+    f = mercado.factor(a.get('bateria'), est['averias'], est.get('marcas'), re.search(r'\bcaja\b|factura', a.get('descripcion') or '', re.I))
+    a['factor_estado'] = round(f, 3)
+    r = mercado.rango(VENTAS, a['modelo'], a.get('capacidad'))
+    if r:
+        k = 0.97 * f                                      # un poco menos: el último precio suele regatearse
+        a['venta_real'], a['venta_baja'], a['venta_alta'] = r['media'] * k, r['baja'] * k, r['alta'] * k
+        a['fuente_venta'] = f"{r['n']} ventas reales" + ('' if r['cap'] or not a.get('capacidad') else ', todas las capacidades')
+        a['fiabilidad'] = r['fiab']
+    else:
+        q = pedidos(precios, a['modelo'], a.get('capacidad'))
+        if q:
+            k = config.VENTA_FACTOR * f
+            a['venta_real'], a['venta_baja'], a['venta_alta'] = q[1] * k, q[0] * k, q[2] * k
+            a['fuente_venta'] = f'{q[3]} anuncios a la venta, aún sin ventas reales'
+        else:
+            a['venta_real'] = a['venta_baja'] = a['venta_alta'] = a['fuente_venta'] = None
+        a['fiabilidad'] = 'baja'
     d, nd = mercado.dias_venta(VENTAS, a['modelo'])
     a['dias_venta'] = d
     a['dias_venta_n'] = nd
+
+
+def evaluar(a, ref):
+    """analisis.evaluar + los tres niveles de compra (bueno / máximo / límite) y el rango de venta."""
+    v, d = analisis.evaluar(a, ref)
+    if d:
+        tramos(a, d)
+    return v, d
+
+
+def tramos(a, d):
+    aj = getattr(config, 'AJUSTE_VENTA', 1.0)
+    fijo = config.COSTE_FIJO[d['tipo']]
+    objetivo = config.BENEFICIO_MIN[(a['familia'], d['tipo'])]
+    coste = d['coste_reparacion']
+    baja = (a.get('venta_baja') or d['venta'] / aj * 0.92) * aj
+    alta = (a.get('venta_alta') or d['venta'] / aj * 1.06) * aj
+    d['venta_rango'] = [round(baja), round(alta)]
+    d['precio_bueno'] = analisis._r5(baja - coste - fijo - objetivo)
+    d['limite'] = analisis._r5(d['venta'] - coste - fijo)
+    d['fiabilidad'] = a.get('fiabilidad', 'baja')
+    d['factor_estado'] = a.get('factor_estado')
+    d['fuente_venta'] = a.get('fuente_venta')
 
 
 def estimar_venta(precios, nombre, cap):
@@ -120,7 +171,12 @@ def texto_aviso(a, cabecera=None):
         tipo = '✅ Listo para comprar y vender'
     else:
         tipo = f"🔧 Reparación {d['nivel']}: {e(', '.join(d['reparacion']))}"
-    ya = '⚡ Ya está por debajo del máximo' if a['precio'] <= d['max_pagar'] else '🤝 Hay que regatear para que salga'
+    if d.get('precio_bueno') is not None and a['precio'] <= d['precio_bueno']:
+        ya = '✅ Ya está en buen precio: ganas aunque lo vendas barato'
+    elif a['precio'] <= d['max_pagar']:
+        ya = '⚡ Ya está por debajo del máximo'
+    else:
+        ya = '🤝 Hay que regatear para que salga'
     riesgo = {
         'alto': f"⚠️ <b>Muy barato ({d.get('pct_mercado')} % del precio normal).</b> Puede ser estafa, robado, financiado o tener algo oculto. "
                 "Pide factura y comprueba el IMEI antes de ir. Nunca pagues por adelantado.",
@@ -139,10 +195,10 @@ def texto_aviso(a, cabecera=None):
     lineas += [cat, titulo, tipo] + ([riesgo] if riesgo else []) + [
         '',
         f"💶 Piden <b>{a['precio']:.0f} €</b> → ofrece <b>{d['oferta']} €</b> · máximo <b>{d['max_pagar']} €</b>",
-        f"📈 Se vende por ~{d['venta']} €{' (según ' + d['fuente_venta'] + ')' if d.get('fuente_venta') else ''} · ganas <b>{'+' if d['beneficio_oferta'] > 0 else ''}{d['beneficio_oferta']} €</b> con tu oferta"
+        f"📈 Se vende por ~{d['venta']} € · ganas <b>{'+' if d['beneficio_oferta'] > 0 else ''}{d['beneficio_oferta']} €</b> con tu oferta"
         f" ({'+' if ben > 0 else ''}{ben} € pagando lo que piden)",
         ya,
-    ] + ([f"⏱️ Este modelo se suele vender en <b>~{a['dias_venta']:g} días</b> ({a['dias_venta_n']} ventas vistas)"]
+    ] + tramos_txt(d) + ([f"⏱️ Este modelo se suele vender en <b>~{str(a['dias_venta']).replace('.', ',')} días</b> ({a['dias_venta_n']} ventas vistas)"]
          if a.get('dias_venta') is not None else []) + [
         f"📍 {e(a.get('zona') or 'Madrid')} · <b>~{a['km']} km</b> de {config.ORIGEN_NOMBRE}" if a.get('km') is not None
         else f"📍 {e(a.get('zona') or 'Madrid')}",
@@ -156,6 +212,22 @@ def texto_aviso(a, cabecera=None):
     lineas += [f'• {e(p)}' for p in a['preguntas']]
     lineas += ['', f"<b>Regateo:</b> {e(a['regateo'])}", '', '<b>Mensaje para copiar:</b>', f"<code>{e(a['mensaje'])}</code>"]
     return '\n'.join(lineas)
+
+
+FIAB = {'alta': '🟢 fiabilidad alta', 'media': '🟡 fiabilidad media', 'baja': '🟠 fiabilidad baja'}
+
+
+def tramos_txt(d):
+    if 'precio_bueno' not in d:
+        return []
+    if d['precio_bueno'] < d['max_pagar']:
+        l = [f"🎯 Compra: 🟢 buen precio ≤ <b>{d['precio_bueno']} €</b> · 🟡 máximo {d['max_pagar']} € · 🔴 nunca más de {d['limite']} €"]
+    else:
+        l = [f"🎯 Compra: 🟢 hasta <b>{d['max_pagar']} €</b> · 🔴 nunca más de {d['limite']} €"]
+    if d.get('venta_rango'):
+        l.append(f"💰 Se vende entre <b>{d['venta_rango'][0]} y {d['venta_rango'][1]} €</b> · {FIAB.get(d.get('fiabilidad'), '')}"
+                 + (f" ({html.escape(d['fuente_venta'])})" if d.get('fuente_venta') else ''))
+    return l
 
 
 def silencio():
@@ -220,6 +292,8 @@ def ficha_web(a, estado='activo'):
         'riesgo': d.get('riesgo'), 'pct_mercado': d.get('pct_mercado'), 'categoria': d.get('categoria'),
         'motivo_trampa': d.get('motivo_trampa'), 'foto': a.get('foto'), 'bateria': a.get('bateria'),
         'dias_venta': a.get('dias_venta'), 'fuente_venta': d.get('fuente_venta'), 'coste_reparacion': d.get('coste_reparacion'),
+        'precio_bueno': d.get('precio_bueno'), 'limite': d.get('limite'), 'venta_rango': d.get('venta_rango'),
+        'fiabilidad': d.get('fiabilidad'), 'factor_estado': d.get('factor_estado'),
         'precio_inicial': a.get('precio_inicial', a['precio']),
     }
 
@@ -256,8 +330,8 @@ def revisar_conocidos(activos, vigilar, temas, precios):
             a.setdefault('precio_inicial', antes)
             a['precio'] = nuevo
             ref = referencia(precios, a['modelo'], a.get('capacidad'))
-            poner_venta(a)
-            v, d = analisis.evaluar(a, ref or a['eval']['ref_mercado'])
+            poner_venta(a, precios)
+            v, d = evaluar(a, ref or a['eval']['ref_mercado'])
             if d:
                 a['eval'] = d
             a['resumen'], a['preguntas'], a['regateo'], a['mensaje'] = analisis.textos(a)
@@ -279,8 +353,8 @@ def revisar_conocidos(activos, vigilar, temas, precios):
             antes = a['precio']
             a['precio'] = nuevo
             ref = referencia(precios, a['modelo'], a.get('capacidad')) or a.get('ref')
-            poner_venta(a)
-            veredicto, d = analisis.evaluar(a, ref)
+            poner_venta(a, precios)
+            veredicto, d = evaluar(a, ref)
             if veredicto == 'avisar':
                 a['eval'] = d
                 a['precio_inicial'] = antes
@@ -338,10 +412,10 @@ def id_de_enlace(url):
 def valorar(a, precios):
     """Análisis de un anuncio que habéis guardado vosotros, aunque el bot no lo vea chollo."""
     ref = referencia(precios, a['modelo'], a.get('capacidad'))
-    poner_venta(a)
+    poner_venta(a, precios)
     if not ref and not a.get('venta_real'):
         return None
-    v, d = analisis.evaluar(a, ref or a['venta_real'] / config.VENTA_FACTOR)
+    v, d = evaluar(a, ref or a['venta_real'] / config.VENTA_FACTOR)
     if d:
         return d
     est = a['est']
@@ -354,12 +428,14 @@ def valorar(a, precios):
     fijo, objetivo = config.COSTE_FIJO[tipo], config.BENEFICIO_MIN[(a['familia'], tipo)]
     maxp = venta - coste - fijo - objetivo
     oferta = max(0, min(analisis._r5(a['precio'] * 0.85), analisis._r5(maxp)))
-    return {'riesgo': 'bajo', 'pct_mercado': round(a['precio'] / ref * 100) if ref else None, 'categoria': 'normal',
+    d = {'riesgo': 'bajo', 'pct_mercado': round(a['precio'] / ref * 100) if ref else None, 'categoria': 'normal',
             'motivo_trampa': None, 'fuente_venta': a.get('fuente_venta'), 'tipo': tipo, 'nivel': nivel, 'reparacion': detalle,
             'coste_reparacion': round(coste), 'ref_mercado': round(ref or 0), 'venta': round(venta),
             'max_pagar': round(maxp), 'oferta': oferta,
             'beneficio_precio_pedido': round(venta - a['precio'] - coste - fijo),
             'beneficio_oferta': round(venta - oferta - coste - fijo)}
+    tramos(a, d)
+    return d
 
 
 def analizar_guardado(wid, precios):
@@ -535,8 +611,9 @@ def resumen_diario(activos, seguidos_ventas, registro, est, temas):
 
 
 # ------------------------------------------------------------------ revisión completa
-def aprender_y_estudiar(precios, seguidos, registro):
+def aprender_y_estudiar(precios, seguidos, registro, condicion=None):
     aprendido = mercado.aprender(registro, lambda m, c: estimar_venta(precios, m, c))
+    aprendido['condicion'] = condicion or mercado.aprender_condicion(VENTAS)
 
     def venta_modelo(m, cap):
         v, n = mercado.venta_real(VENTAS, m, cap)
@@ -551,6 +628,34 @@ def aprender_y_estudiar(precios, seguidos, registro):
         guardar('estudio.json', nuevo)
 
 
+def barrer(seguidos, precios, vistos_items, vistos, activos, vigilar):
+    """Repasa a fondo un par de modelos de iPhone por pasada para seguir todos los anuncios a la venta.
+    Si encuentra uno publicado en las últimas 24 h que se nos había escapado, lo devuelve para analizarlo."""
+    est = cargar('barrido.json', {'i': 0})
+    lista = config.BARRIDO
+    nuevos, añadidos = [], 0
+    for k in range(config.BARRIDO_POR_VEZ):
+        for it in wallapop.buscar(lista[(est['i'] + k) % len(lista)], config.BARRIDO_PAGINAS):
+            if it['id'] in vistos_items:
+                continue
+            vistos_items[it['id']] = True
+            a = preparar(it)
+            if not a:
+                continue
+            antes = len(seguidos)
+            mercado.seguir(seguidos, a)
+            añadidos += len(seguidos) - antes
+            e = a['est']
+            if not (e['grave'] or e['averias'] or e['extras'] or e['roto_sin_precisar']) and not a['tienda']:
+                anotar_precio(precios, a['modelo'], a['id'], a['precio'], a['capacidad'])
+            reciente = (a.get('publicado_ms') or 0) >= ahora_ms() - 86400000
+            if reciente and not a['tienda'] and a['id'] not in vistos and a['id'] not in activos and a['id'] not in vigilar:
+                nuevos.append(a)
+    est['i'] = (est['i'] + config.BARRIDO_POR_VEZ) % len(lista)
+    guardar('barrido.json', est)
+    return nuevos, añadidos
+
+
 def ejecutar():
     global VENTAS
     precios = cargar('precios.json', {})
@@ -559,6 +664,7 @@ def ejecutar():
     vigilar = cargar('vigilar.json', {})
     seguidos = cargar('mercado.json', {})
     VENTAS = cargar('ventas.json', [])
+    condicion = mercado.aprender_condicion(VENTAS)
     temas = telegram.preparar_temas(cargar('temas.json', {}))
     mercado.aprender(cargar('registro.json', {}), lambda m, c: estimar_venta(precios, m, c))
 
@@ -580,12 +686,15 @@ def ejecutar():
                 continue
             nuevos.append(a)
 
+    escapados, barridos = barrer(seguidos, precios, vistos_items, vistos, activos, vigilar)
+    nuevos += escapados
+
     avisados = 0
     candidatos = []
     for a in nuevos:
         ref = referencia(precios, a['modelo'], a['capacidad'])
-        poner_venta(a)
-        veredicto, d = analisis.evaluar(a, ref)
+        poner_venta(a, precios)
+        veredicto, d = evaluar(a, ref)
         if veredicto == 'vigilar':
             a['eval'], a['ref'], a['avisado_ms_vigilar'] = d, ref, ahora_ms()
             vigilar[a['id']] = {k: v for k, v in a.items()}
@@ -612,11 +721,11 @@ def ejecutar():
                           ('vigilar.json', vigilar), ('temas.json', temas), ('mercado.json', seguidos), ('ventas.json', VENTAS)):
         guardar(nombre, datos)
     exportar(activos)
-    aprender_y_estudiar(precios, seguidos, registro)
+    aprender_y_estudiar(precios, seguidos, registro, condicion)
     resumen_diario(activos, VENTAS, registro, est, temas)
     print(f'{len(vistos_items)} anuncios revisados · {len(nuevos)} nuevos de modelos que tratamos · '
           f'{avisados} avisos · {bajadas} bajadas de precio · {len(vigilar)} vigilados · '
-          f'mercado: {len(seguidos)} seguidos, {cerrados} vendidos/retirados en esta pasada, {len(VENTAS)} ventas en memoria · '
+          f'mercado: {len(seguidos)} seguidos (+{barridos} del barrido), {cerrados} vendidos/retirados en esta pasada, {len(VENTAS)} ventas en memoria · '
           f'{sum(len(v) for v in precios.values())} precios de referencia en {len(precios)} modelos')
 
 
@@ -625,6 +734,7 @@ def solo_web():
     global VENTAS
     precios = cargar('precios.json', {})
     VENTAS = cargar('ventas.json', [])
+    mercado.aprender_condicion(VENTAS)
     temas = telegram.preparar_temas(cargar('temas.json', {}))
     mercado.aprender(cargar('registro.json', {}), lambda m, c: estimar_venta(precios, m, c))
     procesar_web(temas, cargar('activos.json', {}), precios)

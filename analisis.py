@@ -327,6 +327,12 @@ def textos(a):
     else:
         regateo = (f"Ofrece {d['oferta']} € recogiéndolo en mano hoy. Si en persona ves marcas, batería por debajo "
                    f"del 85 % o algo que no decía, úsalo para no subir. Tope {d['max_pagar']} €.")
+    if d.get('precio_bueno') is not None and d['precio_bueno'] > 0:
+        if d['precio_bueno'] < d['max_pagar']:
+            regateo += (f" Objetivo: cerrar en {d['precio_bueno']} € o menos (así ganas aunque lo vendas barato); "
+                        f"entre {d['precio_bueno']} y {d['max_pagar']} € aún compensa; por encima de {d['limite']} € pierdes dinero.")
+        else:
+            regateo += f" Por encima de {d['limite']} € pierdes dinero."
     mensaje = (f"Hola, me interesa el {a['modelo']}. ¿Sigue disponible? {preg[0]} "
                f"Si está como dices te puedo ofrecer {d['oferta']} € y lo recojo en mano cuando te venga bien.")
     return resumen, preg, regateo, mensaje

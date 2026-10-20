@@ -98,11 +98,19 @@ EXTRAS = {
 # ---------------------------------------------------------------- memoria del mercado
 # El bot sigue los anuncios que ve (aunque no sean chollos) y apunta cuándo desaparecen
 # para saber a qué precio se venden de verdad y cuántos días tardan.
-MERCADO_MAX_SEGUIDOS = 5000     # anuncios de iPhone seguidos a la vez
-MERCADO_REVISAR_POR_VEZ = 150   # cuántos comprueba en cada pasada (cada uno se mira cada pocas horas)
+MERCADO_MAX_SEGUIDOS = 6000     # anuncios de iPhone seguidos a la vez
+MERCADO_REVISAR_POR_VEZ = 220   # cuántos comprueba en cada pasada (cada uno se mira cada pocas horas)
 MERCADO_DIAS_SEGUIR = 30        # si sigue a la venta tras estos días, se apunta como "no vendido"
 MERCADO_DIAS_ESTUDIO = 120      # ventana del estudio de mercado
 MERCADO_MIN_VENTAS = 5          # ventas vistas necesarias para fiarse del precio real de venta
+
+# Barrido: además de los anuncios nuevos, en cada pasada repasa a fondo un par de modelos
+# para seguir TODOS los iPhone a la venta (así aprende precios reales mucho antes).
+BARRIDO = ['iphone 11', 'iphone 11 pro', 'iphone 12', 'iphone 12 mini', 'iphone 12 pro', 'iphone 13', 'iphone 13 mini',
+           'iphone 13 pro', 'iphone 14', 'iphone 14 plus', 'iphone 14 pro', 'iphone 15', 'iphone 15 plus', 'iphone 15 pro',
+           'iphone 16', 'iphone 16 plus', 'iphone 16 pro', 'iphone 17', 'iphone 17 pro', 'iphone se', 'iphone xr', 'iphone xs']
+BARRIDO_POR_VEZ = 2
+BARRIDO_PAGINAS = 5
 
 # Lo que aprende de vuestras ventas reales (registro de la web)
 APRENDER_MIN_VENTAS = 3         # ventas vuestras necesarias para ajustar el precio de venta

@@ -108,7 +108,13 @@ def texto_aviso(a, cabecera=None):
     lineas = []
     if cabecera:
         lineas += [cabecera, '']
-    lineas += [titulo, tipo] + ([riesgo] if riesgo else []) + [
+    cat = {'chollazo': '🔥🔥 <b>CHOLLAZO · compra ya</b>', 'bueno': '💚 <b>Chollo bueno</b>',
+           'normal': '🔵 Chollo normal',
+           'trampa': f"🟣 <b>¿TRAMPA?</b> {e(d.get('motivo_trampa') or '')}. Puede ser estafa o tener algo oculto, aunque a veces es un chollo real."
+           }.get(d.get('categoria'), '🔵 Chollo normal')
+    if d.get('categoria') == 'trampa':
+        riesgo = 'Pide factura y foto del IMEI en Ajustes antes de quedar. Nunca pagues ni envíes nada por adelantado.'
+    lineas += [cat, titulo, tipo] + ([riesgo] if riesgo else []) + [
         '',
         f"💶 Piden <b>{a['precio']:.0f} €</b> → ofrece <b>{d['oferta']} €</b> · máximo <b>{d['max_pagar']} €</b>",
         f"📈 Se vende por ~{d['venta']} € · ganas <b>{'+' if d['beneficio_oferta'] > 0 else ''}{d['beneficio_oferta']} €</b> con tu oferta"
@@ -186,7 +192,8 @@ def ficha_web(a, estado='activo'):
         'zona': a.get('zona'), 'km': a.get('km'), 'lat': a.get('lat'), 'lng': a.get('lng'), 'url': a['url'],
         'resumen': a['resumen'], 'preguntas': a['preguntas'], 'regateo': a['regateo'], 'mensaje': a['mensaje'],
         'publicado_ms': a.get('publicado_ms'), 'avisado_ms': a.get('avisado_ms'), 'estado': estado,
-        'riesgo': d.get('riesgo'), 'pct_mercado': d.get('pct_mercado'),
+        'riesgo': d.get('riesgo'), 'pct_mercado': d.get('pct_mercado'), 'categoria': d.get('categoria'),
+        'motivo_trampa': d.get('motivo_trampa'),
         'precio_inicial': a.get('precio_inicial', a['precio']),
     }
 

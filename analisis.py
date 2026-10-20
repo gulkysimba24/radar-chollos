@@ -92,9 +92,10 @@ _GRAVE = {
     'para piezas': r'para piezas|despiece|solo piezas|para repuestos|destinado a piezas|no funciona nada',
     'pantalla sin imagen': r'no da imagen|sin imagen|pantalla (en )?negra|t[aá]ctil no (funciona|va)|no funciona el t[aá]ctil|pantalla no funciona|manchas? (verde|negra|morada)|l[ií]neas? (verdes?|verticales?|horizontales?)',
     'tienda o reacondicionado': r'reacondicionad|garant[ií]a de \d|somos (una )?tienda|tienda f[ií]sica|factura con iva',
-    'estafa probable': r'solo env[ií]o|s[oó]lo env[ií]o|pago (por )?adelantado|bizum antes|transferencia antes|western|paypal amigos',
 }
 _GRAVE = {k: re.compile(v, re.I) for k, v in _GRAVE.items()}
+_SOSPECHA = re.compile(r'solo env[ií]o|s[oó]lo env[ií]o|no entrego en mano|pago (por )?adelantado|bizum antes|transferencia antes|'
+                       r'western union|paypal (amigos|familia)|escr[ií]beme (al|por) (whats|tel)|contacta (por|al) whats', re.I)
 _AVERIAS = {
     'pantalla': r'pantalla.{0,25}(rot|rajad|agriet|partid|grieta|estrellad|astillad)|cristal (frontal )?(rot|rajad)|(rota|rajada|agrietada) la pantalla|grietas? en la pantalla|pantalla da[ñn]ada',
     'trasera': r'trasera.{0,12}(rot|rajad|agriet)|tapa.{0,15}(rot|rajad)|parte (de )?(atr[aá]s|trasera).{0,10}rot|cristal trasero.{0,10}rot|detr[aá]s.{0,15}rot',
@@ -136,7 +137,8 @@ def estado(titulo, descripcion):
     averias = [k for k, rx in _AVERIAS.items() if _hay(rx, texto)]
     extras = [k for k, rx in _EXTRAS.items() if _hay(rx, texto)]
     roto = not averias and not extras and _hay(_ROTO_GENERICO, texto)
-    return {'grave': grave, 'averias': averias, 'extras': extras,
+    sospecha = 'pide envío o pago por adelantado' if _SOSPECHA.search(texto) else None
+    return {'grave': grave, 'averias': averias, 'extras': extras, 'sospecha': sospecha,
             'marcas': _hay(_MARCAS, texto), 'roto_sin_precisar': roto}
 
 
@@ -210,8 +212,7 @@ def evaluar(anuncio, ref):
             return None, None
     else:
         coste, nivel, detalle = 0, None, []
-        if precio < ref * 0.45:               # demasiado barato para estar bien: suele ser trampa
-            return None, None
+        # los demasiado baratos ya no se quitan: salen marcados como posible trampa
     venta = ref * config.VENTA_FACTOR
     fijo = config.COSTE_FIJO[tipo]
     objetivo = config.BENEFICIO_MIN[(fam, tipo)]
@@ -227,20 +228,36 @@ def evaluar(anuncio, ref):
         return None, None
     oferta = min(_r5(precio * (0.80 if reparar else 0.88)), _r5(maxp))
     ratio_mercado = precio / ref
-    if not reparar and ratio_mercado < 0.70:
+    if est.get('sospecha') or (not reparar and ratio_mercado < 0.70):
         riesgo = 'alto'
     elif (not reparar and ratio_mercado < 0.80) or (reparar and ratio_mercado < 0.30):
         riesgo = 'medio'
     else:
         riesgo = 'bajo'
+    ben_oferta = venta - oferta - coste - fijo
+    nivel_chollo = categoria(ben_oferta, objetivo, riesgo)
     return veredicto, {
-        'riesgo': riesgo, 'pct_mercado': round(ratio_mercado * 100),
+        'riesgo': riesgo, 'pct_mercado': round(ratio_mercado * 100), 'categoria': nivel_chollo,
+        'motivo_trampa': (est.get('sospecha') or f'está al {round(ratio_mercado * 100)} % de su precio normal') if riesgo == 'alto' else None,
         'tipo': tipo, 'nivel': nivel, 'reparacion': detalle, 'coste_reparacion': round(coste),
         'ref_mercado': round(ref), 'venta': round(venta), 'max_pagar': _r5(maxp) if maxp >= 10 else round(maxp),
         'oferta': oferta,
         'beneficio_precio_pedido': round(venta - precio - coste - fijo),
         'beneficio_oferta': round(venta - oferta - coste - fijo),
     }
+
+
+def categoria(beneficio, objetivo, riesgo):
+    """'trampa' (posible trampa: muy barato o pide pago/envío por adelantado), 'chollazo' (compra ya),
+    'bueno' o 'normal' según cuánto supera el beneficio mínimo."""
+    if riesgo == 'alto':
+        return 'trampa'
+    veces = beneficio / max(objetivo, 1)
+    if veces >= 2.5:
+        return 'chollazo'
+    if veces >= 1.6:
+        return 'bueno'
+    return 'normal'
 
 
 def _r5(x):

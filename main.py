@@ -402,10 +402,17 @@ def id_de_enlace(url):
         m2 = re.search(r'"id":"([a-z0-9]{10,14})"', body)
         if m2:
             return m2.group(1)
-    palabras = ' '.join(w for w in slug.split('-')[:-1] if w)[:60]       # plan B: buscarlo por el título
-    for it in wallapop.buscar(palabras, 2, radio_km=200):
-        if it.get('web_slug') == slug:
-            return it['id']
+    # Plan B (la web de Wallapop a veces bloquea a GitHub): buscarlo por el título con la API
+    num = slug.rsplit('-', 1)[-1]
+    trozos = [w for w in slug.split('-')[:-1] if w]
+    for palabras, orden in ((' '.join(trozos), 'most_relevance'), (' '.join(trozos[:4]), 'most_relevance'),
+                            (' '.join(trozos), 'newest'), (' '.join(trozos[:3]), 'most_relevance')):
+        if not palabras:
+            continue
+        for it in wallapop.buscar(palabras[:60], 3, radio_km=400, orden=orden, precio_max=100000):
+            urls = ' '.join((im.get('urls') or {}).get('small', '') for im in it.get('images') or [])
+            if it.get('web_slug') == slug or (num.isdigit() and f'p{num}/' in urls):
+                return it['id']
     return None
 
 
@@ -501,13 +508,32 @@ def procesar_web(temas, activos, precios, revisar_estado=False):
         if g.get('nota'):
             lineas.append(f"📝 {e(g['nota'])}")
         if not wid:
-            lineas.append('No he podido abrir el enlace para analizarlo, pero queda guardado.')
+            lineas.append('No he podido abrir el enlace todavía; lo vuelvo a intentar en la próxima pasada.')
+            info[gid] = {'error': 'No he podido abrir el anuncio todavía. Lo vuelvo a intentar en la próxima pasada.',
+                         'intentos': 1, 'revisado_ms': ahora_ms(), 'url': g.get('url')}
         url = f.get('url') or i.get('url') or g.get('url')
         bot = [[{'text': '📲 Abrir anuncio', 'url': url}]] if url else []
         if mapa:
             bot.append([{'text': '⭐ Ver guardados', 'url': f'{mapa}/#guardados'}])
         telegram.enviar('\n'.join(lineas), tema, bot or None, foto=f.get('foto') or i.get('foto'))
         est['guardados'].append(gid)
+
+    # enlaces que no se pudieron abrir: se reintenta en las siguientes pasadas
+    for gid, g in guardados.items():
+        i = info.get(gid)
+        if gid not in est['guardados'] or (i and not i.get('error')) or (i or {}).get('intentos', 0) >= 6:
+            continue
+        wid = g.get('wid') or (id_de_enlace(g['url']) if g.get('url') else None)
+        nuevo = analizar_guardado(wid, precios) if wid else None
+        if nuevo:
+            info[gid] = nuevo
+            f = nuevo.get('ficha') or {}
+            telegram.enviar(f"🔎 Ya he analizado el guardado de {e(g.get('por') or 'alguien')}: <b>{e(nombre_guardado(g, nuevo))}</b>"
+                            + (f" · {f['precio']:.0f} € → máximo {f.get('max')} €, ganas ~{f.get('beneficio')} €" if f.get('precio') else ''),
+                            tema, [[{'text': '⭐ Ver guardados', 'url': f'{mapa}/#guardados'}]] if mapa else None)
+        else:
+            info[gid] = {'error': 'No he podido abrir el anuncio (puede que lo hayan quitado). Lo vuelvo a intentar en la próxima pasada.',
+                         'intentos': (i or {}).get('intentos', 0) + 1, 'revisado_ms': ahora_ms(), 'url': g.get('url')}
 
     for gid in list(info):
         if gid not in guardados:

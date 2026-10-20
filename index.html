@@ -710,7 +710,7 @@ function renderGuardados() {
     return `<article class="card ${vendido ? 'vendido' : 'estrella'}"><div class="top"><span class="tag">${vendido ? 'Ya no está' : quien}</span></div>
       <div class="head">${i.foto ? `<img class="foto" src="${esc(i.foto)}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove()">` : ''}<div class="txt">
         <span class="model">${esc(i.titulo || g.modelo || 'Anuncio de Wallapop')}</span>
-        <span class="where">${i.precio ? eur(i.precio) : ''}${pendiente ? 'El bot lo está analizando (1-2 min)…' : ' · no es un modelo que el bot sepa valorar'}</span></div></div>
+        <span class="where">${i.error ? esc(i.error) : (i.precio ? eur(i.precio) : '') + (pendiente ? 'El bot lo está analizando (1-2 min)…' : ' · no es un modelo que el bot sepa valorar')}</span></div></div>
       <div class="body">${extra}<div class="actions"><a class="btn main" href="${esc(i.url || g.url)}" target="_blank" rel="noopener">Abrir en Wallapop</a>
         <button type="button" class="btn" data-comprar="${esc(gid)}">🛒 Lo hemos comprado</button>
         <button type="button" class="btn peligro" data-quitar="${esc(gid)}">Quitar</button></div></div></article>`;

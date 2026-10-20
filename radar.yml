@@ -1,0 +1,37 @@
+name: Radar de chollos
+
+on:
+  schedule:
+    - cron: "*/15 * * * *"   # cada 15 minutos (GitHub puede retrasarlo unos minutos en horas punta)
+  workflow_dispatch: {}       # botón "Run workflow" para lanzarlo a mano
+
+permissions:
+  contents: write             # guarda el estado (anuncios vistos, precios de mercado) y el mapa
+
+concurrency:
+  group: radar
+  cancel-in-progress: false
+
+jobs:
+  radar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Revisar Wallapop y avisar
+        env:
+          TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          MAPA_URL: ${{ vars.MAPA_URL }}
+        run: python3 -m radar.main
+
+      - name: Guardar estado y mapa
+        run: |
+          git config user.name "radar-bot"
+          git config user.email "radar-bot@users.noreply.github.com"
+          git add data docs/chollos.json
+          git diff --cached --quiet && exit 0
+          git commit -m "Radar: revisión $(date -u +%H:%M)"
+          git pull --rebase --autostash || true
+          git push

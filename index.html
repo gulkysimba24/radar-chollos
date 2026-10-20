@@ -1,0 +1,224 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0e1a17">
+<title>Radar de chollos</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Figtree:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<style>
+/* Una columna para el móvil: mapa arriba, fichas debajo; en pantalla ancha, mapa fijo a la izquierda. */
+:root {
+  --bg: #f2f5f4; --surface: #ffffff; --ink: #13201c; --muted: #5b6a65; --line: #d9e1de; --chip: #e9efed;
+  --listo: #0b7a5c; --listo-soft: #dcf1ea; --reparar: #b45f06; --reparar-soft: #fbeedb; --vendido: #8a8f8d;
+  --accent: #13201c; --display: "Barlow Condensed", "Arial Narrow", Arial, sans-serif;
+  --body: "Figtree", system-ui, -apple-system, "Segoe UI", sans-serif; color-scheme: light;
+}
+@media (prefers-color-scheme: dark) { :root {
+  --bg: #0e1513; --surface: #16201d; --ink: #e5eeeb; --muted: #9aaba5; --line: #283632; --chip: #1f2b28;
+  --listo: #45c79f; --listo-soft: #133a2f; --reparar: #f0a548; --reparar-soft: #3a2810; --vendido: #6e7573;
+  --accent: #e5eeeb; color-scheme: dark } }
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body { background: var(--bg); color: var(--ink); font: 15px/1.45 var(--body); padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px); }
+.wrap { max-width: 1180px; margin: 0 auto; padding-left: max(14px, env(safe-area-inset-left, 0px)); padding-right: max(14px, env(safe-area-inset-right, 0px)); padding-block: 14px 40px; }
+header { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: end; gap: 6px 16px; margin-bottom: 12px; }
+h1 { font: 700 30px/1 var(--display); letter-spacing: .4px; text-transform: uppercase; margin: 0; }
+.updated { color: var(--muted); font-size: 13px; }
+.controls { display: grid; gap: 8px; margin-bottom: 12px; }
+.seg { display: flex; gap: 6px; flex-wrap: wrap; }
+.seg button { font: 600 14px var(--body); padding: 7px 12px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); cursor: pointer; }
+.seg button[aria-pressed="true"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+.row { display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center; font-size: 14px; color: var(--muted); }
+.row label { display: flex; align-items: center; gap: 8px; }
+.row input[type=range] { width: 150px; accent-color: var(--listo); }
+.row select { font: 500 14px var(--body); padding: 5px 8px; border-radius: 8px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); }
+.layout { display: grid; gap: 14px; }
+#map { height: 44vh; min-height: 260px; border-radius: 14px; border: 1px solid var(--line); z-index: 0; }
+@media (min-width: 900px) { .layout { grid-template-columns: 1fr 1fr; align-items: start; } #map { position: sticky; top: 12px; height: calc(100vh - 160px); } }
+.list { display: grid; gap: 12px; min-width: 0; }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; overflow: hidden; scroll-margin-top: 12px; }
+.card.sel { outline: 2px solid var(--ink); }
+.card.vendido { opacity: .55; }
+.band { display: flex; justify-content: space-between; gap: 8px; padding: 8px 12px; font-size: 12px; font-weight: 700; letter-spacing: .6px; text-transform: uppercase; }
+.band.listo { background: var(--listo-soft); color: var(--listo); }
+.band.reparar { background: var(--reparar-soft); color: var(--reparar); }
+.band.vendido { background: var(--chip); color: var(--vendido); }
+.head { padding: 10px 12px 4px; display: grid; gap: 2px; }
+.model { font-weight: 700; font-size: 17px; }
+.where { color: var(--muted); font-size: 13px; }
+.where b { color: var(--ink); }
+.nums { display: grid; grid-template-columns: repeat(4, 1fr); margin: 8px 0 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+.nums div { padding: 7px 10px; display: grid; gap: 1px; min-width: 0; }
+.nums div + div { border-left: 1px solid var(--line); }
+.nums span { font-size: 10.5px; text-transform: uppercase; letter-spacing: .5px; color: var(--muted); }
+.nums b { font: 700 21px/1.1 var(--display); font-variant-numeric: tabular-nums; }
+.nums .gan b { color: var(--listo); }
+.nums .neg b { color: var(--reparar); }
+.body { padding: 10px 12px 12px; display: grid; gap: 8px; font-size: 14px; }
+.drop { color: var(--listo); font-weight: 600; }
+.risk { background: var(--reparar-soft); color: var(--ink); border-radius: 8px; padding: 7px 9px; font-size: 13.5px; }
+.risk b { color: var(--reparar); }
+details { border-top: 1px dashed var(--line); padding-top: 6px; }
+summary { cursor: pointer; font-weight: 600; }
+details ul { margin: 6px 0 0; padding-left: 18px; display: grid; gap: 3px; }
+details p { margin: 6px 0 0; }
+.msg { background: var(--chip); padding: 8px 10px; border-radius: 8px; margin-top: 6px; }
+.actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.btn { font: 600 14px var(--body); padding: 9px 13px; border-radius: 10px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); text-decoration: none; cursor: pointer; }
+.btn.main { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+.btn:focus-visible, .seg button:focus-visible, summary:focus-visible { outline: 2px solid var(--listo); outline-offset: 2px; }
+.empty { background: var(--surface); border: 1px dashed var(--line); border-radius: 14px; padding: 18px; color: var(--muted); }
+.note { color: var(--muted); font-size: 12.5px; margin-top: 14px; }
+.leaflet-popup-content { font: 14px/1.4 var(--body); }
+.pin { width: 16px; height: 16px; border-radius: 50%; border: 2px solid #fff; box-shadow: 0 1px 4px rgba(0,0,0,.4); }
+.pin.home { width: 14px; height: 14px; background: #2e5bd8; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Radar de chollos</h1>
+    <span class="updated" id="updated">Cargando…</span>
+  </header>
+  <div class="controls">
+    <div class="seg" role="group" aria-label="Marca">
+      <button type="button" id="f-todos" data-fam="todos" aria-pressed="true">Todos</button>
+      <button type="button" id="f-iphone" data-fam="iphone" aria-pressed="false">iPhone</button>
+      <button type="button" id="f-android" data-fam="android" aria-pressed="false">Android</button>
+    </div>
+    <div class="seg" role="group" aria-label="Estado">
+      <button type="button" id="t-todos" data-tipo="todos" aria-pressed="true">Todo</button>
+      <button type="button" id="t-listo" data-tipo="listo" aria-pressed="false">Listos para vender</button>
+      <button type="button" id="t-reparar" data-tipo="reparar" aria-pressed="false">Para reparar</button>
+    </div>
+    <div class="row">
+      <label for="km">Hasta <b id="kmv">60 km</b> <input type="range" id="km" min="5" max="60" step="5" value="60"></label>
+      <label for="orden">Ordenar <select id="orden"><option value="beneficio">Más beneficio</option><option value="km">Más cerca</option><option value="nuevo">Más nuevos</option></select></label>
+      <label for="vend"><input type="checkbox" id="vend"> Ver vendidos</label>
+    </div>
+  </div>
+  <div class="layout">
+    <div id="map" role="region" aria-label="Mapa de chollos"></div>
+    <div class="list" id="list"><div class="empty">Cargando chollos…</div></div>
+  </div>
+  <p class="note">La ubicación de Wallapop es aproximada (unos cientos de metros). Distancias en línea recta desde <span id="orig">Fuenlabrada</span>. Máximo = lo más que puedes pagar para ganar lo mínimo fijado (25 € iPhone sin reparar, 40 € iPhone a reparar, 60–80 € Android).</p>
+</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script>
+const S = { fam: 'todos', tipo: 'todos', km: 60, orden: 'beneficio', vend: false, sel: decodeURIComponent(location.hash.slice(1)) };
+let data = { chollos: [] }, map, layer, homeLL = [40.2842, -3.7942];
+try { Object.assign(S, JSON.parse(localStorage.getItem('radar-f') || '{}'), { sel: S.sel }); } catch (e) {}
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const eur = n => n == null ? '—' : Math.round(n) + ' €';
+function hace(ms) { if (!ms) return ''; const m = Math.max(1, Math.round((Date.now() - ms) / 60000)); if (m < 60) return `hace ${m} min`; const h = Math.round(m / 60); return h < 48 ? `hace ${h} h` : `hace ${Math.round(h / 24)} días`; }
+function save() { try { localStorage.setItem('radar-f', JSON.stringify({ fam: S.fam, tipo: S.tipo, km: S.km, orden: S.orden, vend: S.vend })); } catch (e) {} }
+
+function syncControls() {
+  document.querySelectorAll('[data-fam]').forEach(b => b.setAttribute('aria-pressed', b.dataset.fam === S.fam));
+  document.querySelectorAll('[data-tipo]').forEach(b => b.setAttribute('aria-pressed', b.dataset.tipo === S.tipo));
+  $('#km').value = S.km; $('#kmv').textContent = S.km + ' km'; $('#orden').value = S.orden; $('#vend').checked = S.vend;
+}
+document.querySelectorAll('[data-fam]').forEach(b => b.onclick = () => { S.fam = b.dataset.fam; save(); syncControls(); render(); });
+document.querySelectorAll('[data-tipo]').forEach(b => b.onclick = () => { S.tipo = b.dataset.tipo; save(); syncControls(); render(); });
+$('#km').oninput = e => { S.km = +e.target.value; $('#kmv').textContent = S.km + ' km'; save(); render(); };
+$('#orden').onchange = e => { S.orden = e.target.value; save(); render(); };
+$('#vend').onchange = e => { S.vend = e.target.checked; save(); render(); };
+
+function visibles() {
+  let l = data.chollos.filter(c => (S.fam === 'todos' || c.familia === S.fam) && (S.tipo === 'todos' || c.tipo === S.tipo)
+    && (c.km == null || c.km <= S.km) && (S.vend || c.estado !== 'vendido'));
+  const pb = c => c.beneficio * (c.riesgo === 'alto' ? 0.4 : c.riesgo === 'medio' ? 0.75 : 1);
+  const k = { beneficio: (a, b) => pb(b) - pb(a), km: (a, b) => (a.km ?? 99) - (b.km ?? 99), nuevo: (a, b) => b.avisado_ms - a.avisado_ms }[S.orden];
+  return l.sort((a, b) => (a.estado === 'vendido') - (b.estado === 'vendido') || k(a, b));
+}
+
+function color(c) { return c.estado === 'vendido' ? 'var(--vendido)' : c.tipo === 'listo' ? 'var(--listo)' : 'var(--reparar)'; }
+function maps(c) { return 'https://www.google.com/maps/dir/?api=1&origin=' + encodeURIComponent((data.origen?.nombre || 'Fuenlabrada') + ', Madrid') + '&destination=' + c.lat + ',' + c.lng; }
+
+function card(c) {
+  const tipo = c.estado === 'vendido' ? 'Ya no está a la venta' : c.tipo === 'listo' ? 'Listo para vender' : `Reparación ${c.nivel || ''}`;
+  const bajada = c.precio_inicial && c.precio_inicial > c.precio ? `<div class="drop">Ha bajado de ${eur(c.precio_inicial)} a ${eur(c.precio)}</div>` : '';
+  return `<article class="card ${c.estado === 'vendido' ? 'vendido' : ''} ${S.sel === c.id ? 'sel' : ''}" id="c-${esc(c.id)}">
+    <div class="band ${c.estado === 'vendido' ? 'vendido' : c.tipo}"><span>${c.familia === 'iphone' ? 'iPhone' : 'Android'} · ${esc(tipo)}</span><span>${esc(hace(c.avisado_ms))}</span></div>
+    <div class="head"><span class="model">${esc(c.modelo)}${c.capacidad ? ' · ' + esc(c.capacidad) : ''}</span>
+      <span class="where">${esc(c.zona || 'Madrid')}${c.km != null ? ` · <b>~${c.km} km</b> de ${esc(data.origen?.nombre || 'Fuenlabrada')}` : ''}</span></div>
+    <div class="nums">
+      <div><span>Piden</span><b>${eur(c.precio)}</b></div>
+      <div class="neg"><span>Ofrece</span><b>${eur(c.oferta)}</b></div>
+      <div><span>Máximo</span><b>${eur(c.max)}</b></div>
+      <div class="gan"><span>Ganas</span><b>${c.beneficio > 0 ? '+' : ''}${eur(c.beneficio)}</b></div>
+    </div>
+    <div class="body">
+      ${bajada}
+      ${c.riesgo === 'alto' ? `<div class="risk"><b>Muy barato (${c.pct_mercado} % del precio normal).</b> Puede ser estafa, robado, financiado o tener algo oculto. Pide factura y comprueba el IMEI. Nunca pagues por adelantado.</div>` :
+        c.riesgo === 'medio' ? `<div class="risk"><b>Por debajo de mercado (${c.pct_mercado} %).</b> Pide factura y comprueba el IMEI.</div>` : ''}
+      <div>${esc(c.resumen)}</div>
+      ${c.reparacion && c.reparacion.length ? `<div><b>Reparación:</b> ${esc(c.reparacion.join(', '))}</div>` : ''}
+      <div><b>Se vende por</b> ~${eur(c.venta)}</div>
+      <details ${S.sel === c.id ? 'open' : ''}><summary>Qué preguntar</summary><ul>${(c.preguntas || []).map(p => `<li>${esc(p)}</li>`).join('')}</ul></details>
+      <details><summary>Cómo regatear</summary><p>${esc(c.regateo)}</p><div class="msg" id="m-${esc(c.id)}">${esc(c.mensaje)}</div>
+        <p><button type="button" class="btn" data-copy="${esc(c.id)}">Copiar mensaje</button></p></details>
+      <div class="actions">
+        <a class="btn main" href="${esc(c.url)}" target="_blank" rel="noopener">Abrir en Wallapop</a>
+        ${c.lat != null ? `<a class="btn" href="${maps(c)}" target="_blank" rel="noopener">Cómo llegar</a><button type="button" class="btn" data-fly="${esc(c.id)}">Ver en el mapa</button>` : ''}
+      </div>
+    </div>
+  </article>`;
+}
+
+function render() {
+  const l = visibles();
+  $('#list').innerHTML = l.length ? l.map(card).join('') :
+    `<div class="empty"><b>No hay chollos con estos filtros.</b><br>Prueba a ampliar la distancia o cambiar de apartado. El radar revisa Wallapop cada 15 minutos y los avisos llegan también al grupo de Telegram.</div>`;
+  layer.clearLayers();
+  l.forEach(c => {
+    if (c.lat == null) return;
+    const m = L.marker([c.lat, c.lng], { icon: L.divIcon({ className: '', html: `<div class="pin" style="background:${color(c)}"></div>`, iconSize: [16, 16] }) });
+    m.bindPopup(`<b>${esc(c.modelo)}</b><br>${eur(c.precio)} · máx. ${eur(c.max)}<br>${esc(c.zona || '')}${c.km != null ? ' · ~' + c.km + ' km' : ''}<br><a href="#${esc(c.id)}">Ver ficha</a> · <a href="${esc(c.url)}" target="_blank" rel="noopener">Wallapop</a>`);
+    m.on('click', () => select(c.id, false));
+    m.addTo(layer); m._cid = c.id;
+  });
+}
+
+function select(id, fly = true) {
+  S.sel = id; history.replaceState(null, '', '#' + id);
+  document.querySelectorAll('.card.sel').forEach(e => e.classList.remove('sel'));
+  const el = document.getElementById('c-' + id);
+  if (el) { el.classList.add('sel'); el.querySelector('details')?.setAttribute('open', ''); el.scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' }); }
+  const c = data.chollos.find(x => x.id === id);
+  if (fly && c && c.lat != null) { map.setView([c.lat, c.lng], 13); layer.eachLayer(m => { if (m._cid === id) m.openPopup(); }); }
+}
+
+document.addEventListener('click', async e => {
+  const f = e.target.closest('[data-fly]'); if (f) { select(f.dataset.fly); document.getElementById('map').scrollIntoView({ block: 'start' }); return; }
+  const c = e.target.closest('[data-copy]');
+  if (c) { const t = document.getElementById('m-' + c.dataset.copy).textContent; try { await navigator.clipboard.writeText(t); c.textContent = 'Copiado'; } catch (err) { const r = document.createRange(); r.selectNodeContents(document.getElementById('m-' + c.dataset.copy)); getSelection().removeAllRanges(); getSelection().addRange(r); c.textContent = 'Selecciónalo y copia'; } }
+});
+window.addEventListener('hashchange', () => { const id = decodeURIComponent(location.hash.slice(1)); if (id) select(id); });
+
+async function load(first) {
+  try {
+    const r = await fetch('chollos.json?t=' + Date.now(), { cache: 'no-store' });
+    data = await r.json();
+  } catch (e) { $('#updated').textContent = 'No se pudieron cargar los datos'; return; }
+  if (data.origen) { homeLL = [data.origen.lat, data.origen.lng]; $('#orig').textContent = data.origen.nombre; }
+  const act = data.chollos.filter(c => c.estado !== 'vendido').length;
+  $('#updated').textContent = `${act} chollo${act === 1 ? '' : 's'} activo${act === 1 ? '' : 's'} · actualizado ${hace(data.actualizado_ms)}`;
+  render();
+  if (first) { if (S.sel && data.chollos.some(c => c.id === S.sel)) setTimeout(() => select(S.sel), 300); }
+}
+
+map = L.map('map', { zoomControl: true, attributionControl: true }).setView(homeLL, 10);
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 18, attribution: '© OpenStreetMap' }).addTo(map);
+L.marker(homeLL, { icon: L.divIcon({ className: '', html: '<div class="pin home"></div>', iconSize: [14, 14] }) }).bindPopup('Fuenlabrada (punto de partida)').addTo(map);
+layer = L.layerGroup().addTo(map);
+syncControls();
+load(true);
+setInterval(() => load(false), 5 * 60 * 1000);
+</script>
+</body>
+</html>

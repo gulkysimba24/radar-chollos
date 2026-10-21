@@ -211,6 +211,27 @@ details p { margin: 6px 0; }
 .checks { display: flex; flex-wrap: wrap; gap: 6px; }
 .checks label { display: inline-flex; align-items: center; gap: 6px; background: var(--bg); border: 1px solid var(--line2); border-radius: 999px; padding: 6px 11px; font-size: 13px; font-weight: 600; color: var(--ink); cursor: pointer; }
 .checks input { width: 15px; height: 15px; }
+.chart { position: relative; width: 100%; }
+.chart svg { display: block; width: 100%; overflow: visible; }
+.chart .tt { position: absolute; pointer-events: none; background: var(--surface2); border: 1px solid var(--line2); border-radius: 8px; padding: 6px 9px; font-size: 12.5px; white-space: nowrap; box-shadow: 0 6px 18px rgba(0,0,0,.45); z-index: 2; }
+.chart .tt b { display: block; margin-bottom: 2px; }
+.chart .tt i { display: inline-block; width: 10px; height: 3px; border-radius: 2px; margin-right: 5px; vertical-align: middle; }
+.leyenda { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 12.5px; color: var(--muted); margin: 0 0 6px; }
+.leyenda i { display: inline-block; width: 14px; height: 3px; border-radius: 2px; margin-right: 6px; vertical-align: middle; }
+.leyenda i.dash { background: repeating-linear-gradient(90deg, var(--muted) 0 4px, transparent 4px 7px) !important; }
+.objetivo .barra-obj { position: relative; height: 16px; border-radius: 8px; background: var(--line); margin: 30px 0 26px; }
+.objetivo .barra-obj > i { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 8px; background: var(--bueno); }
+.objetivo .marca { position: absolute; top: -6px; bottom: -6px; width: 2px; background: var(--ink); opacity: .7; }
+.objetivo .marca span { position: absolute; left: 50%; transform: translateX(-50%); font-size: 11px; color: var(--muted); white-space: nowrap; }
+.objetivo .marca span.arr { top: -18px; } .objetivo .marca span.ab { bottom: -18px; }
+.socios td, .socios th { padding: 6px 4px; }
+.check-row { display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--line); font-size: 14px; }
+.tri { display: inline-flex; border: 1px solid var(--line2); border-radius: 9px; overflow: hidden; }
+.tri button { border: 0; background: var(--bg); padding: 7px 11px; font-weight: 800; cursor: pointer; color: var(--muted); }
+.tri button[aria-pressed="true"].si { background: var(--bueno); color: #062417; }
+.tri button[aria-pressed="true"].no { background: var(--chollazo); color: #fff; }
+.tri button[aria-pressed="true"].nose { background: var(--line2); color: var(--ink); }
+.seg-venta { background: var(--bg); border: 1px solid var(--line); border-radius: 10px; padding: 8px 10px; font-size: 13.5px; }
 .big { font: 800 34px/1 "Barlow Condensed", sans-serif; }
 .resultado { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-top: 12px; }
 .pos { color: var(--bueno) !important; } .negv { color: var(--chollazo) !important; }
@@ -316,15 +337,14 @@ dialog .df .btn { flex: 1; }
   <!-- ===================== ANALIZAR ===================== -->
   <section id="v-analizar" data-vista="analizar" hidden>
     <h2>Analizador</h2>
-    <p class="sub">Pega el enlace de cualquier anuncio de Wallapop y te dice al momento si merece la pena, cuánto pagar y cuánto ganarías. Si el vendedor te da más datos (batería, golpes…), cámbialos abajo y se recalcula.</p>
+    <p class="sub">Pega el enlace de cualquier anuncio de Wallapop y te dice al momento si merece la pena, cuánto pagar y cuánto ganarías. Cuando vayas a verlo, usa el <b>✅ Checklist</b> del resultado para ajustar la batería y lo que encuentres.</p>
     <div class="panel">
       <form class="form" id="f-analizar">
         <label>Enlace del anuncio<input type="url" id="an-url" placeholder="https://es.wallapop.com/item/…" inputmode="url"></label>
         <button class="btn main grande" type="submit">🔎 Analizar</button>
-        <span class="hint">También puedes no poner enlace y rellenar a mano el modelo y el precio de abajo.</span>
       </form>
     </div>
-    <div class="panel">
+    <div class="panel" hidden>
       <div class="form" id="an-datos">
         <label>Modelo<input type="text" id="an-modelo" list="lista-modelos" placeholder="iPhone 13" autocomplete="off"></label>
         <div class="tres">
@@ -358,7 +378,9 @@ dialog .df .btn { flex: 1; }
 
   <!-- ===================== REGISTRO ===================== -->
   <section id="v-registro" data-vista="registro" hidden>
-    <h2>Compras y ventas</h2>
+    <h2>Caja y objetivos</h2>
+    <div id="caja"></div>
+    <h2 style="margin-top:22px">Compras y ventas</h2>
     <p class="sub">Lo que habéis comprado, lo que costó repararlo y por cuánto lo vendéis. El bot aprende de esto para afinar los precios.</p>
     <div class="tiles t2" id="reg-tiles"></div>
     <button class="btn verde grande" type="button" id="btn-nueva">＋ Apuntar una compra</button>
@@ -473,6 +495,55 @@ dialog .df .btn { flex: 1; }
       <button type="submit" class="btn verde" value="ok" id="dc-ok">Guardar</button>
     </div>
   </form>
+</dialog>
+
+<dialog id="d-mov" aria-labelledby="dm-t">
+  <form method="dialog" class="form" id="f-mov">
+    <div class="dh"><h2 id="dm-t">Meter o sacar dinero</h2><button class="icon-btn" value="cancel" formnovalidate aria-label="Cerrar">✕</button></div>
+    <div class="db form">
+      <div class="dos">
+        <label>¿Quién?<input type="text" name="quien" list="lista-socios" required maxlength="30"></label>
+        <label>¿Qué?<select name="tipo" style="width:100%;min-height:42px;background:var(--bg)"><option value="aporte">Mete dinero</option><option value="retirada">Saca dinero</option></select></label>
+      </div>
+      <div class="dos">
+        <label>Importe (€)<input type="number" name="importe" min="0" step="1" inputmode="decimal" required></label>
+        <label>Fecha<input type="date" name="fecha" required></label>
+      </div>
+      <label>Nota<input type="text" name="nota" maxlength="120" placeholder="Ej.: dinero inicial"></label>
+      <div id="dm-lista"></div>
+    </div>
+    <div class="df"><button type="submit" class="btn verde" value="ok">Guardar</button></div>
+  </form>
+</dialog>
+<datalist id="lista-socios"></datalist>
+
+<dialog id="d-pub" aria-labelledby="dp-t">
+  <form method="dialog" class="form" id="f-pub">
+    <div class="dh"><h2 id="dp-t">Lo hemos publicado</h2><button class="icon-btn" value="cancel" formnovalidate aria-label="Cerrar">✕</button></div>
+    <div class="db form">
+      <p class="sub" id="dp-sub" style="margin:0"></p>
+      <label>Precio al que lo habéis puesto (€)<input type="number" name="precio" min="0" step="1" inputmode="decimal" required></label>
+      <label>Enlace de vuestro anuncio (opcional)<input type="url" name="url" inputmode="url" placeholder="https://es.wallapop.com/item/…"></label>
+      <span class="hint">Con el enlace, el bot os avisa si desaparece (por si se os olvida apuntar la venta). Con el precio, os compara con la competencia.</span>
+    </div>
+    <div class="df"><button type="submit" class="btn verde" value="ok">Guardar</button></div>
+  </form>
+</dialog>
+
+<dialog id="d-check" aria-labelledby="dk-t">
+  <div class="dh"><h2 id="dk-t">Checklist en persona</h2><button class="icon-btn" type="button" data-cerrar aria-label="Cerrar">✕</button></div>
+  <div class="db">
+    <p class="sub" id="dk-sub" style="margin:0 0 8px"></p>
+    <div class="form">
+      <div class="dos">
+        <label>Batería que ves (%)<input type="number" id="dk-bat" min="50" max="100" inputmode="numeric" placeholder="Ajustes › Batería"></label>
+        <label>Estado por fuera<select id="dk-est" style="width:100%;min-height:42px;background:var(--bg)"><option value="0">Perfecto</option><option value="1">Marcas leves</option><option value="2">Marcas visibles</option></select></label>
+      </div>
+    </div>
+    <div id="dk-res" style="margin:10px 0 4px"></div>
+    <div id="dk-items"></div>
+  </div>
+  <div class="df"><button type="button" class="btn" data-cerrar>Cerrar</button><button type="button" class="btn verde" id="dk-comprar">🛒 Lo hemos comprado</button></div>
 </dialog>
 
 <dialog id="d-vender" aria-labelledby="dv-t">
@@ -684,6 +755,7 @@ function fichaHTML(c, o = {}) {
   const chips = [
     c.reservado && !vend ? `<span class="chip">⏸️ <b>Reservado</b>: puede que lo venda a otro</span>` : '',
     c.origen === 'milanuncios' ? `<span class="chip">📰 <b>Milanuncios</b> · ubicación aproximada</span>` : '',
+    (() => { const f = finResumen(); return f && !vend && c.oferta > f.caja ? `<span class="chip">💸 Os faltan <b>${eur(c.oferta - f.caja)}</b> de caja</span>` : ''; })(),
     c.profesional ? `<span class="chip">🏪 Perfil destacado: pregunta si da factura</span>` : '',
     cat(c) === 'regatear' ? `<span class="chip">🤝 Piden un <b>${Math.round((c.precio / Math.max(c.max, 1) - 1) * 100)} %</b> más que el máximo</span>` : '',
     g ? `<span class="chip">⛽ <b>${eur2(g.euros)}</b> ida y vuelta</span>` : '',
@@ -723,6 +795,7 @@ function fichaHTML(c, o = {}) {
         ${o.gid ? '' : `<button type="button" class="btn star ${on ? 'on' : ''}" data-guardar="${esc(c.id)}" aria-pressed="${on}">${on ? '★ Guardado' : '☆ Guardar'}</button>`}
         ${c.lat != null ? `<a class="btn" href="${maps(c)}" target="_blank" rel="noopener">Cómo llegar</a>` : ''}
         ${c.lat != null && !o.gid ? `<button type="button" class="btn" data-fly="${esc(c.id)}">Ver en el mapa</button>` : ''}
+        <button type="button" class="btn" data-check="${esc(o.gid || c.id)}">✅ Checklist en persona</button>
         <button type="button" class="btn" data-comprar="${esc(o.gid || c.id)}">🛒 Lo hemos comprado</button>
         ${o.gid ? '' : descartado(c.id) ? `<button type="button" class="btn" data-recuperar="${esc(c.id)}">↩️ Recuperar</button>` : `<button type="button" class="btn peligro" data-descartar="${esc(c.id)}">🚫 No me interesa</button>`}
         ${o.gid ? `<button type="button" class="btn peligro" data-quitar="${esc(o.gid)}">Quitar</button>` : ''}
@@ -828,7 +901,7 @@ $('#f-enlace').addEventListener('submit', async e => {
   if (!/wallapop\.com\/item\/|milanuncios\.com\/.*\d{6,}\.htm/i.test(url)) { toast('Pega el enlace de un anuncio de Wallapop o Milanuncios', true); return; }
   const slug = (url.match(/\/item\/([a-z0-9-]+)/i) || url.match(/-(\d{6,})\.htm/) || [])[1] || '-';
   const ya = data.chollos.find(c => c.url && c.url.includes(slug));
-  const btn = e.submitter; btn.disabled = true;
+  const btn = e.submitter || $('#f-enlace button[type=submit]'); btn.disabled = true;
   try {
     guardados = await cambiar('guardados.json', { items: {} }, j => {
       j.items = j.items || {};
@@ -897,7 +970,7 @@ function opcionesCap(modelo, sel) {
 $('#f-analizar').addEventListener('submit', async e => {
   e.preventDefault();
   const url = $('#an-url').value.trim();
-  if (!url) { calcularAnalisis(); return; }
+  if (!url) { toast('Pega primero el enlace del anuncio', true); return; }
   if (/milanuncios\.com/i.test(url)) {
     $('#an-res').innerHTML = `<div class="empty"><b>Los anuncios de Milanuncios los analiza el bot.</b><br>Milanuncios no deja que la web los lea directamente. Pégalo en <b>Guardados</b> y en 1–2 minutos lo tienes analizado (y avisado en Telegram).<p><button type="button" class="btn main" id="an-a-guardados">Ir a Guardados con este enlace</button></p></div>`;
     $('#an-a-guardados').onclick = () => { $('#enlace-url').value = url; irA('guardados'); $('#enlace-url').focus(); };
@@ -931,7 +1004,15 @@ $('#f-analizar').addEventListener('submit', async e => {
     $$('#an-averias input').forEach(c => c.checked = est.averias.includes(c.value) || est.extras.includes(c.value) || (c.value === 'batería' && bat != null && bat < 80));
     $('#an-marcas').checked = est.marcas; $('#an-caja').checked = /\bcaja\b|factura/i.test(desc);
     calcularAnalisis();
-  } catch (err) { $('#an-res').innerHTML = `<div class="empty"><b>${esc(err.message)}</b></div>`; anItem = null; }
+  } catch (err) {
+    anItem = null;
+    const red = /fetch|network|load failed|cors/i.test(err.message);
+    $('#an-res').innerHTML = `<div class="empty"><b>${red ? 'Tu móvil no ha podido leer el anuncio directamente de Wallapop.' : esc(err.message)}</b>
+      <br>Puedo pedírselo al bot: lo analiza en 1–2 minutos y te aparece en <b>Guardados</b> (y os avisa en Telegram).
+      <p><button type="button" class="btn main" id="an-bot">🤖 Que lo analice el bot</button></p>
+</div>`;
+    $('#an-bot').onclick = () => { $('#enlace-url').value = url; $('#enlace-nota').value = 'Desde el analizador'; irA('guardados'); $('#f-enlace').requestSubmit(); };
+  }
   finally { btn.disabled = false; }
 });
 ['#an-modelo', '#an-precio', '#an-cap', '#an-bat', '#an-marcas', '#an-caja'].forEach(q => $(q).addEventListener('input', () => { if (q === '#an-modelo') opcionesCap($('#an-modelo').value.trim(), $('#an-cap').value); if (q === '#an-bat') { const b = num($('#an-bat').value); const c = $$('#an-averias input').find(x => x.value === 'batería'); if (b != null) c.checked = b < 80; } calcularAnalisis(); }));
@@ -1004,7 +1085,7 @@ function calcularAnalisis() {
     <div class="niveles">${bueno < r5(maxp) ? `<div class="v"><span>🟢 Buena</span><b>≤ ${eur(bueno)}</b></div>` : ''}<div class="a"><span>🟡 Máximo</span><b>${eur(r5(maxp))}</b></div><div class="r"><span>🔴 Tope</span><b>${eur(limite)}</b></div></div>
     <div class="body">
       ${riesgo === 'alto' ? `<div class="risk"><b>¿Trampa? ${est.sospecha ? 'Pide envío o pago por adelantado.' : `Está al ${Math.round(ratio * 100)} % de su precio normal.`}</b> Pide factura y foto del IMEI antes de quedar. Nunca pagues por adelantado.</div>` : riesgo === 'medio' ? `<div class="risk medio"><b>Por debajo de mercado (${Math.round(ratio * 100)} %).</b> Pide factura y comprueba el IMEI.</div>` : ''}
-      <div class="chips">${g ? `<span class="chip">⛽ <b>${eur2(g.euros)}</b> ida y vuelta</span>` : ''}${P.dias != null ? `<span class="chip">⏱️ se vende en <b>~${String(P.dias).replace('.', ',')} días</b></span>` : ''}${f !== 1 ? `<span class="chip">Estado: <b>${f > 1 ? '+' : ''}${Math.round((f - 1) * 100)} %</b> sobre el precio normal</span>` : ''}</div>
+      <div class="chips">${g ? `<span class="chip">⛽ <b>${eur2(g.euros)}</b> ida y vuelta</span>` : ''}${P.dias != null ? `<span class="chip">⏱️ se vende en <b>~${String(P.dias).replace('.', ',')} días</b></span>` : ''}</div>
       <div><b>Se vende entre ${eur(baja)} y ${eur(alta)}</b> <span class="fiab ${pr.fiab}">fiabilidad ${pr.fiab}</span><br><span style="color:var(--faint);font-size:12.5px">Según ${esc(pr.fuente)}${capSel === '*' || !P.caps[capSel] ? ' (todas las capacidades)' : ''}.</span></div>
       ${detalle.length ? `<div><b>Reparación:</b> ${esc(detalle.join(', '))} · total ~${eur(coste)}</div>` : ''}
       <details open><summary>Qué preguntar</summary><ul>${pregs.slice(0, 6).map(q => `<li>${esc(q)}</li>`).join('')}</ul></details>
@@ -1013,6 +1094,7 @@ function calcularAnalisis() {
         ${anItem ? `<a class="btn main" href="${esc(anItem.url)}" target="_blank" rel="noopener">Abrir en Wallapop</a>` : ''}
         ${anItem ? `<button type="button" class="btn star" id="an-guardar">☆ Guardar y avisar</button>` : ''}
         ${anItem?.lat != null ? `<a class="btn" href="${maps(anItem)}" target="_blank" rel="noopener">Cómo llegar</a>` : ''}
+        <button type="button" class="btn" id="an-check">✅ Checklist en persona</button>
         <button type="button" class="btn" id="an-comprar">🛒 Lo hemos comprado</button>
       </div>
     </div></article>`;
@@ -1023,6 +1105,7 @@ function calcularAnalisis() {
       b.textContent = '★ Guardado'; b.classList.add('on'); toast('⭐ Guardado. Le llegará un aviso a tu compañero.'); renderGuardados();
     } catch (err) { if (err.message !== 'sin clave') toast(err.message, true); } finally { b.disabled = false; }
   });
+  $('#an-check').onclick = () => abrirCheck(ficha);
   $('#an-comprar').onclick = () => {
     abrirCompra.pre = { wid: anItem?.id || null, venta_estimada: Math.round(venta) };
     abrirCompra(null, { modelo, capacidad: ficha.capacidad, bateria: bat ?? '', estado: tipo, precio_compra: oferta, gasolina: g ? Math.round(g.euros * 10) / 10 : '', url: anItem?.url || '',
@@ -1036,6 +1119,7 @@ const vendida = c => num(c.precio_venta) != null;
 const beneficio = c => vendida(c) ? num(c.precio_venta) - coste(c) : null;
 const diasEntre = (a, b) => a && b ? Math.max(0, Math.round((new Date(b) - new Date(a)) / DIA)) : null;
 function renderRegistro() {
+  renderCaja();
   const cs = (registro.compras || []).slice().sort((a, b) => vendida(a) - vendida(b) || (b.fecha_compra || '').localeCompare(a.fecha_compra || ''));
   const vend = cs.filter(vendida), stock = cs.filter(c => !vendida(c));
   const mes = hoyISO().slice(0, 7);
@@ -1065,8 +1149,9 @@ function renderRegistro() {
         ${(c.reparaciones || []).length ? `<div><b>Reparaciones:</b> ${c.reparaciones.map(r => `${esc(r.pieza)} ${eur(r.coste)}`).join(' · ')}</div>` : ''}
         ${num(c.gasolina) || num(c.otros) ? `<div>Gasolina ${eur2(num(c.gasolina) || 0)}${num(c.otros) ? ` · otros ${eur(c.otros)}` : ''} · coste total <b>${eur(coste(c))}</b></div>` : `<div>Coste total <b>${eur(coste(c))}</b></div>`}
         ${c.notas ? `<div class="nota">📝 ${esc(c.notas)}</div>` : ''}
+        ${seguimientoHTML(c)}
         <div class="actions">
-          ${vendida(c) ? '' : `<button type="button" class="btn verde" data-vender="${esc(c.id)}">💰 Marcar vendido</button><button type="button" class="btn" data-texto="${esc(c.id)}">📝 Texto para vender</button>`}
+          ${vendida(c) ? '' : `<button type="button" class="btn verde" data-vender="${esc(c.id)}">💰 Marcar vendido</button><button type="button" class="btn" data-texto="${esc(c.id)}">📝 Texto para vender</button><button type="button" class="btn" data-publicar="${esc(c.id)}">📢 ${c.publicado ? 'Cambiar precio publicado' : 'Lo hemos publicado'}</button>`}
           <button type="button" class="btn" data-editar="${esc(c.id)}">Editar</button>
           ${c.url ? `<a class="btn" href="${esc(c.url)}" target="_blank" rel="noopener">Anuncio</a>` : ''}
         </div>
@@ -1210,6 +1295,269 @@ function textoVenta(c) {
 $('#dt-copiar').onclick = e => copiar($('#dt-desc').value, e.target);
 $('#dt-copiar-t').onclick = e => copiar($('#dt-titulo').value, e.target);
 
+
+// ------------------------------------------------------------------ caja, gráficos y objetivo
+let SEG = {};
+const MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
+function finResumen() {
+  const movs = registro.movimientos || [];
+  if (!movs.length) return null;
+  const cs = (registro.compras || []).filter(c => c.modelo);
+  const aportado = movs.reduce((s, m) => s + (num(m.importe) || 0) * (m.tipo === 'aporte' ? 1 : -1), 0);
+  const gastado = cs.reduce((s, c) => s + coste(c), 0), ingresado = cs.filter(vendida).reduce((s, c) => s + num(c.precio_venta), 0);
+  const stock = cs.filter(c => !vendida(c)).reduce((s, c) => s + coste(c), 0);
+  const caja = aportado - gastado + ingresado, extra = num(registro.ajustes?.extra) || 0;
+  return { caja, aportado, stock, total: caja + stock, extra, disponible: caja + extra, beneficio: cs.filter(vendida).reduce((s, c) => s + beneficio(c), 0) };
+}
+function finObjetivo(mes) {
+  const r = finResumen() || {};
+  const presupuesto = num(registro.meses?.[mes]?.presupuesto) || r.total || 0;
+  const vend = (registro.compras || []).filter(c => vendida(c) && c.modelo);
+  let margen = 0.15, ciclo = 14;
+  if (vend.length >= 3) {
+    margen = vend.reduce((s, c) => s + beneficio(c), 0) / Math.max(1, vend.reduce((s, c) => s + coste(c), 0));
+    const ds = vend.map(c => diasEntre(c.fecha_compra, c.fecha_venta)).filter(d => d != null);
+    ciclo = (ds.length ? ds.reduce((a, b) => a + b, 0) / ds.length : 10) + 4;
+  }
+  const vueltas = Math.max(1, Math.min(4, 30 / ciclo)), teorico = presupuesto * Math.max(margen, 0.05) * vueltas;
+  return { presupuesto, margen, vueltas, minimo: r5(teorico * 0.5), realista: r5(teorico * 0.8), ambicioso: r5(teorico * 1.25), real: vend.length >= 3 };
+}
+function serieDinero() {
+  const ev = [];
+  (registro.movimientos || []).forEach(m => ev.push({ f: m.fecha, caja: (num(m.importe) || 0) * (m.tipo === 'aporte' ? 1 : -1), ap: (num(m.importe) || 0) * (m.tipo === 'aporte' ? 1 : -1), st: 0 }));
+  (registro.compras || []).filter(c => c.modelo).forEach(c => {
+    if (c.fecha_compra) ev.push({ f: c.fecha_compra, caja: -coste(c), ap: 0, st: coste(c) });
+    if (vendida(c) && c.fecha_venta) ev.push({ f: c.fecha_venta, caja: num(c.precio_venta), ap: 0, st: -coste(c) });
+  });
+  if (!ev.length) return [];
+  ev.sort((a, b) => a.f.localeCompare(b.f));
+  const out = []; let caja = 0, ap = 0, st = 0, i = 0;
+  for (let d = new Date(ev[0].f); d <= new Date(hoyISO()); d = new Date(d.getTime() + DIA)) {
+    const iso = d.toISOString().slice(0, 10);
+    while (i < ev.length && ev[i].f <= iso) { caja += ev[i].caja; ap += ev[i].ap; st += ev[i].st; i++; }
+    out.push({ f: iso, caja, total: caja + st, ap });
+  }
+  return out;
+}
+// gráfico de líneas en SVG con línea de lectura y ventanita al pasar el dedo
+function graficoLineas(el, puntos, series, fmtY = v => eur(v)) {
+  if (!puntos.length) { el.innerHTML = ''; return; }
+  const W = Math.max(280, el.clientWidth || 600), H = 190, ml = 52, mr = 10, mt = 10, mb = 24;
+  const vals = series.flatMap(s => puntos.map(p => p[s.k]));
+  let lo = Math.min(0, ...vals), hi = Math.max(...vals, 10); const pad = (hi - lo) * 0.08; hi += pad;
+  const n = puntos.length, X = i => ml + (n === 1 ? (W - ml - mr) / 2 : i * (W - ml - mr) / (n - 1)), Y = v => mt + (hi - v) * (H - mt - mb) / (hi - lo || 1);
+  const paso = Math.pow(10, Math.floor(Math.log10((hi - lo) / 3 || 1))), tick = [1, 2, 5, 10].map(m => m * paso).find(t => (hi - lo) / t <= 4) || paso * 10;
+  let grid = '';
+  for (let v = Math.ceil(lo / tick) * tick; v <= hi; v += tick) grid += `<line x1="${ml}" x2="${W - mr}" y1="${Y(v)}" y2="${Y(v)}" stroke="var(--line)" stroke-width="1"/><text x="${ml - 6}" y="${Y(v) + 4}" text-anchor="end" font-size="11" fill="var(--faint)">${fmtY(v)}</text>`;
+  const fx = [0, Math.floor((n - 1) / 2), n - 1].filter((v, i, a) => a.indexOf(v) === i);
+  const xl = fx.map(i => `<text x="${X(i)}" y="${H - 6}" text-anchor="${i === 0 ? 'start' : i === n - 1 ? 'end' : 'middle'}" font-size="11" fill="var(--faint)">${fecha(puntos[i].f)}</text>`).join('');
+  const lineas = series.map(s => `<polyline fill="none" stroke="${s.c}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" ${s.dash ? 'stroke-dasharray="5 4"' : ''} points="${puntos.map((p, i) => X(i) + ',' + Y(p[s.k])).join(' ')}"/>`).join('');
+  const fin = series.filter(s => !s.dash).map(s => `<circle cx="${X(n - 1)}" cy="${Y(puntos[n - 1][s.k])}" r="4" fill="${s.c}" stroke="var(--surface)" stroke-width="2"/>`).join('');
+  el.innerHTML = `<svg viewBox="0 0 ${W} ${H}" height="${H}" role="img" aria-label="${esc(series.map(s => s.n).join(', '))}">${grid}${xl}${lineas}${fin}<line class="cur" x1="0" x2="0" y1="${mt}" y2="${H - mb}" stroke="var(--muted)" stroke-width="1" visibility="hidden"/><rect x="${ml}" y="0" width="${W - ml - mr}" height="${H}" fill="transparent"/></svg><div class="tt" hidden></div>`;
+  const svg = el.querySelector('svg'), tt = el.querySelector('.tt'), cur = el.querySelector('.cur');
+  const mover = ev => {
+    const r = svg.getBoundingClientRect(), x = (ev.clientX - r.left) * W / r.width;
+    const i = Math.max(0, Math.min(n - 1, Math.round((x - ml) / ((W - ml - mr) / Math.max(1, n - 1)))));
+    cur.setAttribute('x1', X(i)); cur.setAttribute('x2', X(i)); cur.setAttribute('visibility', 'visible');
+    tt.hidden = false; tt.innerHTML = `<b>${fecha(puntos[i].f)}</b>` + series.map(s => `<div><i style="background:${s.c}"></i>${s.n}: <b style="display:inline">${fmtY(puntos[i][s.k])}</b></div>`).join('');
+    const px = X(i) * r.width / W; tt.style.left = Math.min(Math.max(0, px - 70), r.width - tt.offsetWidth) + 'px'; tt.style.top = '0px';
+  };
+  svg.addEventListener('pointermove', mover); svg.addEventListener('pointerdown', mover);
+  svg.addEventListener('pointerleave', () => { tt.hidden = true; cur.setAttribute('visibility', 'hidden'); });
+}
+function graficoBarras(el, datos, color) {
+  if (!datos.length) { el.innerHTML = ''; return; }
+  const W = Math.max(280, el.clientWidth || 600), H = 170, ml = 48, mr = 8, mt = 18, mb = 24;
+  const vals = datos.map(d => d.v); let lo = Math.min(0, ...vals), hi = Math.max(10, ...vals) * 1.12;
+  const Y = v => mt + (hi - v) * (H - mt - mb) / (hi - lo || 1), bw = Math.min(46, (W - ml - mr) / datos.length * 0.6), step = (W - ml - mr) / datos.length;
+  const barras = datos.map((d, i) => { const x = ml + step * i + (step - bw) / 2, y0 = Y(0), y1 = Y(d.v), h = Math.max(1, Math.abs(y1 - y0));
+    const top = Math.min(y0, y1);
+    return `<g><title>${esc(d.l)}: ${signo(d.v)}</title><path d="M${x},${top + h} v${-(h - 4)} q0,-4 4,-4 h${bw - 8} q4,0 4,4 v${h - 4} z" fill="${color}" ${d.v < 0 ? `transform="translate(0 ${0})"` : ''}/>
+      <text x="${x + bw / 2}" y="${(d.v >= 0 ? top : top + h) - 5 + (d.v < 0 ? 16 : 0)}" text-anchor="middle" font-size="11.5" fill="var(--ink)" font-weight="700">${signo(d.v)}</text>
+      <text x="${x + bw / 2}" y="${H - 6}" text-anchor="middle" font-size="11" fill="var(--faint)">${esc(d.l)}</text></g>`; }).join('');
+  el.innerHTML = `<svg viewBox="0 0 ${W} ${H}" height="${H}" role="img" aria-label="Beneficio por mes"><line x1="${ml}" x2="${W - mr}" y1="${Y(0)}" y2="${Y(0)}" stroke="var(--line2)"/>${barras}</svg>`;
+}
+function renderCaja() {
+  const r = finResumen(), mes = hoyISO().slice(0, 7);
+  const nombres = [...new Set([...(registro.movimientos || []).map(m => m.quien), ...(registro.compras || []).map(c => c.quien), AJ.nombre].filter(Boolean))];
+  $('#lista-socios').innerHTML = nombres.map(n => `<option value="${esc(n)}">`).join('');
+  if (!r) {
+    $('#caja').innerHTML = `<div class="panel"><p><b style="color:var(--ink)">Empezad apuntando el dinero que pone cada uno.</b> Con eso la web calcula la caja disponible, cuánto le toca a cada uno, vuestro objetivo del mes, y el radar solo os enseña chollos que podéis pagar.</p>
+      <button type="button" class="btn verde grande" id="btn-mov">＋ Meter dinero</button></div>`;
+    $('#btn-mov').onclick = () => abrirMov(); return;
+  }
+  const porSocio = {};
+  (registro.movimientos || []).forEach(m => { porSocio[m.quien] = (porSocio[m.quien] || 0) + (num(m.importe) || 0) * (m.tipo === 'aporte' ? 1 : -1); });
+  const totalAp = Object.values(porSocio).reduce((a, b) => a + Math.max(0, b), 0) || 1;
+  const ob = finObjetivo(mes);
+  const hecho = (registro.compras || []).filter(c => vendida(c) && (c.fecha_venta || '').startsWith(mes)).reduce((s, c) => s + beneficio(c), 0);
+  const [y, m] = mes.split('-').map(Number), diasMes = new Date(y, m, 0).getDate(), hoyD = +hoyISO().slice(8, 10), quedan = diasMes - hoyD;
+  const escala = Math.max(ob.ambicioso * 1.08, hecho, 10), pct = v => Math.max(0, Math.min(100, v / escala * 100));
+  const falta = Math.max(0, ob.realista - hecho);
+  const meses = {};
+  (registro.compras || []).filter(vendida).forEach(c => { const k = (c.fecha_venta || '').slice(0, 7); if (k) meses[k] = (meses[k] || 0) + beneficio(c); });
+  const mesesL = Object.keys(meses).sort().slice(-6).map(k => ({ l: MESES[+k.slice(5) - 1].slice(0, 3), v: Math.round(meses[k]) }));
+  const pctObj = Math.round(hecho / Math.max(ob.realista, 1) * 100);
+  $('#caja').innerHTML = `
+    <div class="tiles t2">
+      <div class="tile verde"><b>${eur(r.caja)}</b><span>Caja disponible</span></div>
+      <div class="tile azul"><b>${eur(r.total)}</b><span>Dinero total (caja + stock)</span></div>
+      <div class="tile ambar"><b>${eur(r.stock)}</b><span>Metido en móviles</span></div>
+      <div class="tile ${r.beneficio >= 0 ? 'verde' : 'rojo'}"><b>${signo(r.beneficio)}</b><span>Beneficio · empezasteis con ${eur(r.aportado)}</span></div>
+    </div>
+    <div class="panel objetivo">
+      <p style="margin:0"><b style="color:var(--ink);font-size:15px">🎯 Objetivo de ${MESES[m - 1]}</b> · lleváis <b class="${hecho >= 0 ? 'pos' : 'negv'}">${signo(hecho)}</b> de <b style="color:var(--ink)">${eur(ob.realista)}</b> (${pctObj} %)</p>
+      <div class="barra-obj" role="img" aria-label="Beneficio del mes ${eur(hecho)} de un objetivo realista de ${eur(ob.realista)}">
+        <i style="width:${pct(hecho)}%"></i>
+        <span class="marca" style="left:${pct(ob.minimo)}%"><span class="arr">Mínimo</span><span class="ab">${eur(ob.minimo)}</span></span>
+        <span class="marca" style="left:${pct(ob.realista)}%"><span class="arr">Realista</span><span class="ab">${eur(ob.realista)}</span></span>
+        <span class="marca" style="left:${pct(ob.ambicioso)}%"><span class="arr">Ambicioso</span><span class="ab">${eur(ob.ambicioso)}</span></span>
+      </div>
+      <p>${hecho >= ob.ambicioso ? '🏆 ¡Objetivo ambicioso superado! Este mes os habéis salido.' : hecho >= ob.realista ? '🎉 ¡Objetivo cumplido! A por el ambicioso.' : quedan > 0 ? `Os faltan <b style="color:var(--ink)">${eur(falta)}</b> en ${quedan} días: más o menos <b style="color:var(--ink)">${(() => { const v = (registro.compras || []).filter(vendida); const media = v.length ? Math.max(15, v.reduce((a, c) => a + beneficio(c), 0) / v.length) : 40; const n = Math.max(1, Math.ceil(falta / media)); return n + (n === 1 ? ' venta' : ' ventas'); })()}</b> más (ganando ~${eur((() => { const v = (registro.compras || []).filter(vendida); return v.length ? v.reduce((a, c) => a + beneficio(c), 0) / v.length : 40; })())} por móvil).` : 'Último día del mes.'}</p>
+      <p style="font-size:12.5px">Calculado con un presupuesto de <b style="color:var(--ink)">${eur(ob.presupuesto)}</b>, un margen del ${Math.round(ob.margen * 100)} % ${ob.real ? '(el vuestro real)' : '(estimado: con 3 ventas se usa el vuestro)'} y ~${String(Math.round(ob.vueltas * 10) / 10).replace('.', ',')} vueltas al dinero al mes.</p>
+      <div class="dos form" style="display:grid;grid-template-columns:1fr auto;gap:8px;align-items:end">
+        <label>Presupuesto de ${MESES[m - 1]} (€)<input type="number" id="pres-mes" min="0" step="10" inputmode="decimal" value="${num(registro.meses?.[mes]?.presupuesto) ?? ''}" placeholder="${Math.round(r.total)} (dinero total)"></label>
+        <button type="button" class="btn" id="pres-ok">Guardar</button>
+      </div>
+    </div>
+    <div class="panel">
+      <p style="margin-bottom:4px"><b style="color:var(--ink)">Evolución del dinero</b></p>
+      <div class="leyenda"><span><i style="background:#1BA673"></i>Dinero total</span><span><i style="background:#3987E5"></i>Caja disponible</span><span><i class="dash"></i>Aportado</span></div>
+      <div class="chart" id="g-dinero"></div>
+    </div>
+    ${mesesL.length ? `<div class="panel"><p style="margin-bottom:4px"><b style="color:var(--ink)">Beneficio por mes</b></p><div class="chart" id="g-meses"></div></div>` : ''}
+    <div class="panel">
+      <p><b style="color:var(--ink)">Cada uno</b> · el beneficio se reparte según lo que ha puesto cada uno</p>
+      <div class="scroll"><table class="tabla socios"><tr><th>Socio</th><th class="n">Ha puesto</th><th class="n">Parte</th><th class="n">Beneficio</th></tr>
+      ${Object.entries(porSocio).map(([n, v]) => `<tr><td>${esc(n)}</td><td class="n">${eur(v)}</td><td class="n">${Math.round(Math.max(0, v) / totalAp * 100)} %</td><td class="n ${r.beneficio >= 0 ? 'pos' : 'negv'}">${signo(r.beneficio * Math.max(0, v) / totalAp)}</td></tr>`).join('')}</table></div>
+      <div class="dos form" style="display:grid;grid-template-columns:1fr auto;gap:8px;align-items:end;margin-top:10px">
+        <label>Extra que podéis poner si sale un chollo caro (€)<input type="number" id="extra" min="0" step="10" inputmode="decimal" value="${r.extra || ''}" placeholder="0"></label>
+        <button type="button" class="btn" id="extra-ok">Guardar</button>
+      </div>
+      <p class="sub" style="margin:6px 0 0;font-size:12.5px">El radar solo os enseña chollos que podéis pagar con la caja (${eur(r.caja)}) más este extra.</p>
+      <div class="actions" style="margin-top:10px"><button type="button" class="btn verde" id="btn-mov">＋ Meter o sacar dinero</button></div>
+    </div>`;
+  const pts = serieDinero();
+  graficoLineas($('#g-dinero'), pts, [{ k: 'total', n: 'Dinero total', c: '#1BA673' }, { k: 'caja', n: 'Caja disponible', c: '#3987E5' }, { k: 'ap', n: 'Aportado', c: '#92A0B0', dash: true }]);
+  if (mesesL.length) graficoBarras($('#g-meses'), mesesL, '#1BA673');
+  $('#btn-mov').onclick = () => abrirMov();
+  $('#pres-ok').onclick = async () => { const v = num($('#pres-mes').value); await guardarReg(j => { j.meses = j.meses || {}; j.meses[mes] = { ...(j.meses[mes] || {}), presupuesto: v }; }, `Presupuesto de ${MESES[m - 1]}`, 'Presupuesto guardado'); };
+  $('#extra-ok').onclick = async () => { const v = num($('#extra').value) || 0; await guardarReg(j => { j.ajustes = { ...(j.ajustes || {}), extra: v }; }, 'Extra para chollos', 'Guardado: el radar lo tendrá en cuenta en la próxima pasada'); };
+}
+async function guardarReg(fn, msg, ok) {
+  try { registro = await cambiar('registro.json', { compras: [] }, j => { fn(j); return j; }, msg); toast(ok || 'Guardado'); renderTodo(['reg', 'est', 'mapa']); return true; }
+  catch (err) { if (err.message !== 'sin clave') toast(err.message, true); return false; }
+}
+function abrirMov() {
+  const f = $('#f-mov'); f.reset(); f.fecha.value = hoyISO(); f.quien.value = AJ.nombre || '';
+  const ms = (registro.movimientos || []).slice().sort((a, b) => b.fecha.localeCompare(a.fecha));
+  $('#dm-lista').innerHTML = ms.length ? `<p class="sub" style="margin:6px 0">Últimos movimientos</p>` + ms.slice(0, 8).map(x => `<div class="check-row"><span>${esc(fecha(x.fecha))} · ${esc(x.quien)} ${x.tipo === 'aporte' ? 'mete' : 'saca'} <b>${eur(x.importe)}</b>${x.nota ? ' · ' + esc(x.nota) : ''}</span><button type="button" class="btn peligro" data-borrar-mov="${esc(x.id)}" style="min-height:32px">Borrar</button></div>`).join('') : '';
+  $$('[data-borrar-mov]').forEach(b => b.onclick = async () => { if (!confirm('¿Borrar este movimiento?')) return; if (await guardarReg(j => { j.movimientos = (j.movimientos || []).filter(x => x.id !== b.dataset.borrarMov); }, 'Borrar movimiento', 'Borrado')) $('#d-mov').close(); });
+  $('#d-mov').showModal();
+}
+$('#f-mov').addEventListener('submit', async e => {
+  if (e.submitter?.value !== 'ok') return; e.preventDefault();
+  const f = e.target, mv = { id: 'm' + Date.now(), quien: f.quien.value.trim(), tipo: f.tipo.value, importe: num(f.importe.value), fecha: f.fecha.value, nota: f.nota.value.trim() };
+  if (!mv.quien || !mv.importe) { toast('Pon quién y cuánto', true); return; }
+  if (await guardarReg(j => { j.movimientos = [...(j.movimientos || []), mv]; }, `${mv.tipo === 'aporte' ? 'Aporte' : 'Retirada'}: ${mv.quien} ${mv.importe} €`, '💰 Apuntado')) $('#d-mov').close();
+});
+let publicando = null;
+function abrirPub(c) {
+  publicando = c; const f = $('#f-pub'); f.reset();
+  const s = SEG[c.id] || {};
+  f.precio.value = c.publicado?.precio ?? (s.recomendado ? Math.round(s.recomendado * 1.04 / 5) * 5 : '');
+  f.url.value = c.publicado?.url || '';
+  $('#dp-sub').textContent = `${c.modelo}${c.capacidad ? ' ' + c.capacidad : ''} · os costó ${eur(coste(c))}` + (s.recomendado ? ` · precio normal ~${eur(s.recomendado)}` : '');
+  $('#d-pub').showModal();
+}
+$('#f-pub').addEventListener('submit', async e => {
+  if (e.submitter?.value !== 'ok') return; e.preventDefault();
+  const f = e.target, pub = { precio: num(f.precio.value), url: f.url.value.trim(), fecha: hoyISO() };
+  if (await guardarReg(j => { const x = (j.compras || []).find(x => x.id === publicando.id); if (x) x.publicado = pub; }, `Publicado: ${publicando.modelo} a ${pub.precio} €`, '📢 Guardado')) $('#d-pub').close();
+});
+function seguimientoHTML(c) {
+  const s = SEG[c.id]; if (!s || vendida(c)) return '';
+  const mi = num(c.publicado?.precio);
+  const partes = [];
+  if (s.competencia) partes.push(`Hay <b>${s.competencia}</b> iguales a la venta (el más barato a ${eur(s.mas_barato)})`);
+  if (s.recomendado) partes.push(`precio normal <b>~${eur(s.recomendado)}</b>, para venderlo rápido <b>~${eur(s.rapido)}</b>`);
+  let aviso = '';
+  if (mi && s.mas_baratos_que_el_tuyo) aviso = `<br>📉 <b>${s.mas_baratos_que_el_tuyo}</b> están más baratos que el vuestro (${eur(mi)}).`;
+  if (s.dias >= 10) aviso += `<br>⏳ Lleva <b>${s.dias} días</b>: el dinero parado no gana nada, valorad bajarlo.`;
+  return `<div class="seg-venta">📊 ${partes.join(' · ') || 'Aún sin datos de la competencia'}.${mi ? `<br>📢 Publicado a <b>${eur(mi)}</b>${c.publicado.url ? ` · <a href="${esc(c.publicado.url)}" target="_blank" rel="noopener">ver anuncio</a>` : ''}` : ''}${aviso}</div>`;
+}
+
+// ------------------------------------------------------------------ checklist en persona
+const CHECKS = [
+  ['icloud', 'Cierra su iCloud y quita «Buscar mi iPhone» delante de ti', 'stop', 'No cierra la cuenta: no lo podrías usar ni vender'],
+  ['imei', 'El IMEI de Ajustes coincide con el de la caja o la factura', 'stop', 'El IMEI no coincide: puede ser robado o de otro móvil'],
+  ['pagado', 'Está pagado del todo (no es de financiación ni de contrato)', 'stop', 'Si está financiado lo pueden bloquear'],
+  ['faceid', 'Face ID (o huella) funciona', 'stop', 'Sin Face ID casi no se puede vender'],
+  ['piezas', 'En Ajustes › General › Información no sale «pieza desconocida»', 'baja', 'Piezas no originales: se vende un 15 % más barato'],
+  ['pantalla', 'Pantalla sin manchas, líneas ni zonas que no respondan', 'pieza:pantalla', 'Habría que cambiar la pantalla'],
+  ['camaras', 'Cámaras (delantera y traseras) enfocan bien', 'pieza:cámara', 'Habría que arreglar la cámara'],
+  ['sonido', 'Altavoz, micrófono y llamada de prueba bien', 'pieza:altavoz', 'Habría que arreglar el altavoz o micro'],
+  ['carga', 'Carga bien por cable', 'pieza:puerto de carga', 'Habría que cambiar el conector de carga'],
+  ['botones', 'Botones y vibración funcionan', 'pieza:botón', 'Habría que arreglar un botón'],
+];
+let chk = null;
+function abrirCheck(c) {
+  chk = { c, r: {} };
+  $('#dk-sub').innerHTML = `<b style="color:var(--ink)">${esc(c.modelo)}${c.capacidad ? ' · ' + esc(c.capacidad) : ''}</b> · piden ${eur(c.precio)}. Marca cada cosa mientras lo pruebas y te digo cuánto pagar.`;
+  $('#dk-bat').value = c.bateria ?? ''; $('#dk-est').value = '0';
+  $('#dk-items').innerHTML = CHECKS.filter(([k]) => k !== 'faceid' || c.familia === 'iphone').map(([k, t]) => `<div class="check-row"><span>${esc(t)}</span><span class="tri" data-k="${k}">
+      <button type="button" class="si" aria-pressed="false" aria-label="Sí">✓</button><button type="button" class="no" aria-pressed="false" aria-label="No">✗</button></span></div>`).join('');
+  $$('#dk-items .tri').forEach(t => t.querySelectorAll('button').forEach(b => b.onclick = () => {
+    const ya = b.getAttribute('aria-pressed') === 'true';
+    t.querySelectorAll('button').forEach(x => x.setAttribute('aria-pressed', 'false'));
+    if (!ya) b.setAttribute('aria-pressed', 'true');
+    chk.r[t.dataset.k] = ya ? null : b.classList.contains('si'); calcCheck();
+  }));
+  calcCheck(); $('#d-check').showModal();
+}
+['#dk-bat', '#dk-est'].forEach(q => $(q).addEventListener('input', () => chk && calcCheck()));
+function calcCheck() {
+  const c = chk.c, F = AN?.factores || { bat: { '90+': 1.03, '85-89': 1, '80-84': 0.95, '<80': 0.9, '?': 0.99 }, marcas: 0.96 };
+  const bat = num($('#dk-bat').value), est = +$('#dk-est').value;
+  const tb = bat == null ? '?' : bat >= 90 ? '90+' : bat >= 85 ? '85-89' : bat >= 80 ? '80-84' : '<80';
+  let f = F.bat[tb] * (est === 1 ? F.marcas : est === 2 ? F.marcas * 0.94 : 1);
+  const paradas = [], notas = []; let rep = c.tipo === 'reparar' ? (c.coste_reparacion || 0) : 0;
+  const [pP, pB, pT] = AN?.piezas?.[c.modelo] || AN?.piezas_defecto || [90, 30, 60];
+  const precioPieza = { pantalla: pP, 'batería': pB, ...(AN?.extras || { 'cámara': 45, 'puerto de carga': 12, altavoz: 12, 'botón': 10 }) };
+  CHECKS.forEach(([k, , tipo, txt]) => {
+    if (chk.r[k] !== false) return;
+    if (tipo === 'stop') paradas.push(txt);
+    else if (tipo === 'baja') { f *= 0.85; notas.push(txt); }
+    else { const pieza = tipo.slice(6); rep += precioPieza[pieza] || 30; notas.push(`${txt} (~${eur(precioPieza[pieza] || 30)})`); }
+  });
+  if (bat != null && bat < 80) notas.push(`Batería al ${bat} %: se vende bastante más barato (o hay que cambiarla, ~${eur(pB)})`);
+  const base = (c.venta || 0) / (c.factor_estado || 1), venta = base * f;
+  const tipo = rep > 0 ? 'reparar' : 'listo', fam = c.familia || 'iphone';
+  const fijo = AN?.coste_fijo?.[tipo] ?? (tipo === 'listo' ? 5 : 10), obj = AN?.beneficio_min?.[`${fam}_${tipo}`] ?? (tipo === 'listo' ? 25 : 40);
+  const max = r5(venta - rep - fijo - obj), bueno = r5(venta * 0.93 - rep - fijo - obj), tope = r5(venta - rep - fijo);
+  const oferta = Math.max(0, Math.min(r5(c.precio * 0.88), bueno));
+  const marcadas = Object.values(chk.r).filter(v => v != null).length;
+  let v;
+  if (paradas.length) v = ['no', '❌ No lo compres', paradas.join('. ') + '.'];
+  else if (rep > (c.tipo === 'reparar' ? c.coste_reparacion || 0 : 0)) v = ['justo', `⚠️ Tiene algo que reparar`, `Ahora no reparáis: solo si os lo deja en ${eur(bueno)} o menos.`];
+  else if (c.precio <= bueno) v = ['si', `✅ Cómpralo: a ${eur(c.precio)} está en buen precio`, `Ganaríais ~${eur(venta - c.precio - rep - fijo)} vendiéndolo a precio normal.`];
+  else if (c.precio <= max) v = ['ok', `👍 Compensa, pero intenta bajarlo`, `Ofrece ${eur(oferta)} y no pases de ${eur(max)}.`];
+  else v = ['justo', `🤝 Solo si lo baja a ${eur(max)}`, `A ${eur(c.precio)} ganaríais solo ~${eur(venta - c.precio - rep - fijo)}.`];
+  chk.oferta = paradas.length ? null : Math.min(c.precio, max);
+  $('#dk-res').innerHTML = `<div class="veredicto ${v[0]}" style="margin:0">${v[1]}<small>${esc(v[2])}</small></div>
+    ${paradas.length ? '' : `<div class="niveles" style="margin:10px 0 0"><div class="v"><span>🟢 Buena</span><b>≤ ${eur(bueno)}</b></div><div class="a"><span>🟡 Máximo</span><b>${eur(max)}</b></div><div class="r"><span>🔴 Tope</span><b>${eur(tope)}</b></div></div>`}
+    ${notas.length ? `<ul style="margin:10px 0 0;padding-left:18px;color:#C9D2DC;font-size:13.5px">${notas.map(n => `<li>${esc(n)}</li>`).join('')}</ul>` : ''}
+    <p class="sub" style="margin:8px 0 0">Se vendería por ~${eur(venta)} en este estado. ${marcadas < 6 ? `Te quedan cosas por comprobar (${marcadas} de ${$$('#dk-items .tri').length}).` : ''}</p>`;
+  $('#dk-comprar').disabled = !!paradas.length;
+}
+$('#dk-comprar').onclick = () => {
+  const c = chk.c, g = gasolina(c.km);
+  $('#d-check').close();
+  abrirCompra.pre = { wid: c.id || null, venta_estimada: c.venta || null };
+  abrirCompra(null, { modelo: c.modelo, capacidad: c.capacidad || '', bateria: num($('#dk-bat').value) ?? '', estado: c.tipo || 'listo', precio_compra: chk.oferta ?? c.precio,
+    gasolina: g ? Math.round(g.euros * 10) / 10 : '', url: c.url || '', reparaciones: [] });
+};
+
 // ------------------------------------------------------------------ estudio
 let verUltimas = 30;
 function renderEstudio() {
@@ -1352,10 +1700,12 @@ $('#btn-nueva').onclick = () => { abrirCompra.pre = null; abrirCompra(null); };
 $$('[data-cerrar]').forEach(b => b.onclick = () => b.closest('dialog').close());
 
 document.addEventListener('click', async e => {
-  const t = e.target.closest('[data-fly],[data-copiar],[data-guardar],[data-quitar],[data-comprar],[data-vender],[data-texto],[data-editar],[data-descartar],[data-recuperar]');
+  const t = e.target.closest('[data-fly],[data-copiar],[data-guardar],[data-quitar],[data-comprar],[data-vender],[data-texto],[data-editar],[data-descartar],[data-recuperar],[data-publicar],[data-check]');
   if (!t) return;
   const d = t.dataset;
   if (d.descartar) { e.preventDefault(); map && map.closePopup(); return descartar(d.descartar); }
+  if (d.publicar) return abrirPub(registro.compras.find(x => x.id === d.publicar));
+  if (d.check) { const c = data.chollos.find(x => x.id === d.check) || (guardados.items || {})[d.check]?.wid && data.chollos.find(x => x.id === guardados.items[d.check].wid) || info[d.check]?.ficha || (guardados.items || {})[d.check]; if (c && c.venta) abrirCheck(c); else toast('Este anuncio aún no está analizado', true); return; }
   if (d.recuperar) return descartar(d.recuperar, true);
   if (d.fly) { select(d.fly); $('#map').scrollIntoView({ block: 'start' }); }
   else if (d.copiar != null) copiar(d.copiar, t);
@@ -1410,7 +1760,7 @@ function renderTodo(que = ['mapa', 'guard', 'reg', 'est', 'gas']) {
   if (que.includes('gas')) renderGasolina();
 }
 async function recargar(first) {
-  const [d, e, i, an] = await Promise.all([pages('chollos.json', null), pages('estudio.json', {}), pages('guardados_info.json', {}), pages('analizador.json', null), cargarPropios(), cargarDescartados()]);
+  const [d, e, i, an] = await Promise.all([pages('chollos.json', null), pages('estudio.json', {}), pages('guardados_info.json', {}), pages('analizador.json', null), cargarPropios(), cargarDescartados(), pages('seguimiento.json', {}).then(x => { SEG = x || {}; })]);
   if (an) AN = an;
   if (!d) { $('#updated').textContent = 'No se pudieron cargar los datos'; return; }
   data = d; estudio = e || {}; info = i || {};

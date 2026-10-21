@@ -10,7 +10,7 @@ import urllib.parse
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
-import analisis, config, mercado, milanuncios, telegram, wallapop
+import analisis, config, finanzas, mercado, milanuncios, telegram, wallapop
 
 RAIZ = os.path.dirname(os.path.abspath(__file__))
 DATOS = RAIZ   # todo va en la carpeta principal del repositorio
@@ -207,6 +207,8 @@ def texto_aviso(a, cabecera=None):
         extra.append('♻️ Dice «reacondicionado»: pregunta dónde se compró y si conserva la garantía')
     if a['est'].get('supuesto'):
         extra.append('❓ Dice que está roto pero no qué: se calcula como si fuera la pantalla')
+    if CAJA and d.get('oferta') and d['oferta'] > CAJA['caja']:
+        extra.append(f"💸 Os faltan ~{d['oferta'] - CAJA['caja']:.0f} € de caja (tenéis {CAJA['caja']:.0f} €): habría que poner dinero")
     lineas += [cat, titulo, tipo] + ([riesgo] if riesgo else []) + extra + [
         '',
         f"💶 Piden <b>{a['precio']:.0f} €</b> → ofrece <b>{d['oferta']} €</b> · máximo <b>{d['max_pagar']} €</b>",
@@ -316,6 +318,7 @@ def ficha_web(a, estado='activo'):
 
 
 DESCARTADOS = set()   # anuncios que habéis marcado «No me interesa» en la web
+CAJA = None           # dinero disponible (de la web); None si no habéis apuntado aportes
 
 
 def interesa(a, d=None):
@@ -323,6 +326,8 @@ def interesa(a, d=None):
     d = d or a.get('eval') or {}
     if a['id'] in DESCARTADOS:
         return False
+    if CAJA and d.get('oferta') and d['oferta'] > CAJA['disponible']:
+        return False                      # no os llega ni contando el extra que podéis poner
     if (getattr(config, 'SOLO_ROTOS_CHOLLAZO', False) and a.get('familia') == 'iphone'
             and d.get('tipo') == 'reparar' and d.get('categoria') != 'chollazo'):
         return False
@@ -679,6 +684,14 @@ def resumen_diario(activos, seguidos_ventas, registro, est, temas):
         gan = sum(float(c['precio_venta']) - coste(c) for c in vend_mes)
         l += ['', f"💰 Este mes: <b>{'+' if gan >= 0 else ''}{gan:.0f} €</b> en {len(vend_mes)} venta{"s" if len(vend_mes) != 1 else ""} · "
                   f"📦 En stock: {len(stock)} ({sum(coste(c) for c in stock):.0f} € invertidos)"]
+    caja = finanzas.resumen(registro)
+    if caja:
+        ob = finanzas.objetivo(registro, hoy.strftime('%Y-%m'))
+        mes = hoy.strftime('%Y-%m')
+        hecho = sum(finanzas._n(c['precio_venta']) - finanzas.coste(c) for c in registro.get('compras', [])
+                    if finanzas.vendida(c) and (c.get('fecha_venta') or '').startswith(mes))
+        l += [f"🏦 Caja: <b>{caja['caja']:.0f} €</b> · dinero total {caja['total']:.0f} € · "
+              f"objetivo del mes <b>{hecho:.0f} / {ob['realista']} €</b> ({min(100, round(hecho / max(ob['realista'], 1) * 100))} %)"]
     ventas_hoy = [v for v in seguidos_ventas if v['fin'] >= inicio_dia and v['como'] != 'no']
     rapidos = {}
     for v in seguidos_ventas:
@@ -784,6 +797,64 @@ def barrer(seguidos, precios, vistos_items, vistos, activos, vigilar):
     return nuevos, añadidos
 
 
+def seguimiento(registro, seguidos, precios, temas):
+    """Para cada móvil en stock: competencia en Wallapop, precio recomendado y avisos si se estanca."""
+    viejo = cargar('seguimiento.json', {})
+    nuevo, e = {}, html.escape
+    hoy = datetime.now(MADRID).date()
+    mapa = (os.environ.get('MAPA_URL') or '').rstrip('/')
+    for c in (registro or {}).get('compras') or []:
+        if not c.get('modelo') or finanzas.vendida(c):
+            continue
+        cid, modelo, cap = c['id'], c['modelo'], c.get('capacidad') or None
+        s = dict(viejo.get(cid) or {})
+        comp = sorted(x['p'] for x in seguidos.values() if x['m'] == modelo and x['t'] == 'listo'
+                      and (not cap or not x.get('c') or x.get('c') == cap))
+        f = mercado.factor(finanzas._n(c.get('bateria')) or None)
+        r = mercado.rango(VENTAS, modelo, cap)
+        if r:
+            normal, rapido, fuente = r['media'] * 0.97 * f, r['baja'] * 0.97 * f, f"{r['n']} ventas reales"
+        else:
+            q = pedidos(precios, modelo, cap)
+            normal, rapido, fuente = (q[1] * config.VENTA_FACTOR * f, q[0] * config.VENTA_FACTOR * f, f'{q[3]} anuncios') if q else (None, None, None)
+        try:
+            dias = (hoy - datetime.fromisoformat(c.get('fecha_compra') or str(hoy)).date()).days
+        except ValueError:
+            dias = 0
+        pub = c.get('publicado') or {}
+        mi = finanzas._n(pub.get('precio')) or None
+        s.update({'competencia': len(comp), 'mas_barato': comp[0] if comp else None,
+                  'mediana': round(statistics.median(comp)) if comp else None,
+                  'mas_baratos_que_el_tuyo': sum(1 for p in comp if mi and p < mi - 5),
+                  'recomendado': analisis._r5(normal) if normal else None, 'rapido': analisis._r5(rapido) if rapido else None,
+                  'fuente': fuente, 'dias': dias, 'coste': round(finanzas.coste(c)), 'revisado_ms': ahora_ms()})
+        # ¿se ha vendido nuestro anuncio?
+        if pub.get('url') and ahora_ms() - s.get('anuncio_ms', 0) > 2 * 3600000:
+            s['anuncio_ms'] = ahora_ms()
+            wid = s.get('wid') or id_de_enlace(pub['url'])
+            s['wid'] = wid
+            det = detalle(wid) if wid else 'error'
+            if (det is None or (isinstance(det, dict) and wallapop.flag(det.get('sold')))) and not s.get('avisado_vendido'):
+                s['avisado_vendido'] = True
+                telegram.enviar(f"🤔 Vuestro anuncio del <b>{e(modelo)}</b> ya no está a la venta. ¿Lo habéis vendido? "
+                                f"Apuntadlo en el registro para que cuente el beneficio.", temas.get('equipo'),
+                                [[{'text': '💰 Ir al registro', 'url': f'{mapa}/#registro'}]] if mapa else None, clave='equipo')
+        # avisos para no tener el dinero parado (como mucho uno cada 3 días por móvil)
+        consejo = None
+        if dias >= 10 and s.get('recomendado'):
+            consejo = (f"📦 El <b>{e(modelo)}</b> lleva <b>{dias} días</b> en stock. Para venderlo ya, ponlo a "
+                       f"<b>~{s['rapido']} €</b> (precio normal ~{s['recomendado']} €; os costó {s['coste']} €).")
+        elif mi and s['mas_baratos_que_el_tuyo'] >= 3 and s.get('recomendado') and mi > s['recomendado'] + 10:
+            consejo = (f"📉 Hay <b>{s['mas_baratos_que_el_tuyo']}</b> {e(modelo)} más baratos que el vuestro ({mi:.0f} €). "
+                       f"Bajándolo a <b>~{s['recomendado']} €</b> saldría antes (os costó {s['coste']} €).")
+        if consejo and ahora_ms() - s.get('consejo_ms', 0) > 3 * 86400000:
+            s['consejo_ms'] = ahora_ms()
+            telegram.enviar(consejo, temas.get('equipo'), [[{'text': '💰 Ver registro', 'url': f'{mapa}/#registro'}]] if mapa else None,
+                            clave='equipo')
+        nuevo[cid] = s
+    guardar('seguimiento.json', nuevo)
+
+
 def exportar_analizador(precios):
     """analizador.json: reglas y precios para que la web analice un anuncio al momento, sin esperar al bot."""
     tabla = {}
@@ -838,6 +909,8 @@ def ejecutar():
     VENTAS = cargar('ventas.json', [])
     condicion = mercado.aprender_condicion(VENTAS)
     DESCARTADOS.update(cargar('descartados.json', {}).get('items', {}))
+    global CAJA
+    CAJA = finanzas.resumen(cargar('registro.json', {}))
     temas = telegram.preparar_temas(cargar('temas.json', {}))
     mercado.aprender(cargar('registro.json', {}), lambda m, c: estimar_venta(precios, m, c))
 
@@ -927,6 +1000,7 @@ def ejecutar():
     # lo que viene ahora es extra: si algo falla, se avisa en el registro pero la pasada no se pierde
     for nombre, paso in (('estudio', lambda: aprender_y_estudiar(precios, seguidos, registro, condicion)),
                          ('analizador', lambda: exportar_analizador(precios)),
+                         ('seguimiento de ventas', lambda: seguimiento(registro, seguidos, precios, temas)),
                          ('resumen diario', lambda: resumen_diario(activos, VENTAS, registro, est, temas))):
         try:
             paso()

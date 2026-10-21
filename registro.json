@@ -21,7 +21,16 @@
    "notas": ""
   }
  ],
- "movimientos": [],
+ "movimientos": [
+  {
+   "id": "m1792609406731",
+   "quien": "Gulkysimba",
+   "tipo": "aporte",
+   "importe": 150,
+   "fecha": "2026-10-21",
+   "nota": "Dinero inicio"
+  }
+ ],
  "meses": {
   "2026-10": {
    "presupuesto": 350

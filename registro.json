@@ -15,8 +15,8 @@
    "reparaciones": [],
    "gasolina": 0,
    "otros": null,
-   "precio_venta": null,
-   "fecha_venta": "",
+   "precio_venta": 300,
+   "fecha_venta": "2026-10-21",
    "url": "https://es.wallapop.com/item/iphone-14-plus-1315234840",
    "notas": ""
   }

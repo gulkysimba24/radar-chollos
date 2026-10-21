@@ -23,14 +23,6 @@
  ],
  "movimientos": [
   {
-   "id": "m1792576116056",
-   "quien": "Gulkyismba24",
-   "tipo": "aporte",
-   "importe": 175,
-   "fecha": "2026-10-21",
-   "nota": ""
-  },
-  {
    "id": "m1792576202537",
    "quien": "Gulkyismba24",
    "tipo": "retirada",

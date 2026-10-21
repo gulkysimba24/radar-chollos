@@ -20,5 +20,15 @@
    "url": "https://es.wallapop.com/item/iphone-14-plus-1315234840",
    "notas": ""
   }
+ ],
+ "movimientos": [
+  {
+   "id": "m1792576116056",
+   "quien": "Gulkyismba24",
+   "tipo": "aporte",
+   "importe": 175,
+   "fecha": "2026-10-21",
+   "nota": ""
+  }
  ]
 }

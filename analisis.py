@@ -6,7 +6,7 @@ import statistics
 import config
 
 # ---------------------------------------------------------------- modelos
-_IPH = re.compile(r'iphone\s*(se|xs\s*max|xr|xs|x|1[0-7]e?|[89])\b\s*(pro\s*max|pro|plus|mini|max)?', re.I)
+_IPH = re.compile(r'iphone\s*(se|air|xs\s*max|xr|xs|x|1[0-9]e?|[89])(?:\b|(?=pro|plus|mini|max))\s*(pro\s*max|pro|plus|mini|max)?', re.I)
 _SAM_S = re.compile(r'\bs\s?(2[0-6])\s*(ultra|plus|\+|fe)?(?![0-9])', re.I)
 _SAM_A = re.compile(r'\ba\s?([1-9][0-9])\b', re.I)
 _PIXEL = re.compile(r'pixel\s*(\d{1,2})\s*(pro\s*xl|pro\s*fold|pro|a|xl|fold)?\b', re.I)
@@ -23,7 +23,7 @@ def modelo(titulo):
         num, suf = m.group(1).replace(' ', ''), (m.group(2) or '').strip()
         if num in ('8', '9'):
             return None                      # demasiado viejo para revender bien
-        num = {'se': 'SE', 'x': 'X', 'xr': 'XR', 'xs': 'XS', 'xsmax': 'XS Max'}.get(num, num)
+        num = {'se': 'SE', 'air': 'Air', 'x': 'X', 'xr': 'XR', 'xs': 'XS', 'xsmax': 'XS Max'}.get(num, num)
         suf = re.sub(r'\s+', ' ', suf)
         suf = {'pro max': 'Pro Max', 'pro': 'Pro', 'plus': 'Plus', 'mini': 'mini', 'max': 'Pro Max' if num != 'XS' else 'Max'}.get(suf, '')
         if num == 'XS' and suf == 'Max':
@@ -91,7 +91,7 @@ _GRAVE = {
     'mojado': r'mojad|se (me )?cay[oó] al agua|humedad|oxidad',
     'para piezas': r'para piezas|despiece|solo piezas|para repuestos|destinado a piezas|no funciona nada',
     'pantalla sin imagen': r'no da imagen|sin imagen|pantalla (en )?negra|t[aá]ctil no (funciona|va)|no funciona el t[aá]ctil|pantalla no funciona|manchas? (verde|negra|morada)|l[ií]neas? (verdes?|verticales?|horizontales?)',
-    'tienda o reacondicionado': r'reacondicionad|garant[ií]a de \d|somos (una )?tienda|tienda f[ií]sica|factura con iva',
+    'tienda': r'garant[ií]a de \d+ ?(mes|año|a[ñn]o)|somos (una )?tienda|tienda f[ií]sica|nuestra tienda|factura con iva|visita nuestr|p[aá]sate por (la|nuestra) tienda',
 }
 _GRAVE = {k: re.compile(v, re.I) for k, v in _GRAVE.items()}
 _SOSPECHA = re.compile(r'solo env[ií]o|s[oó]lo env[ií]o|no entrego en mano|pago (por )?adelantado|bizum antes|transferencia antes|'
@@ -137,9 +137,13 @@ def estado(titulo, descripcion):
     averias = [k for k, rx in _AVERIAS.items() if _hay(rx, texto)]
     extras = [k for k, rx in _EXTRAS.items() if _hay(rx, texto)]
     roto = not averias and not extras and _hay(_ROTO_GENERICO, texto)
+    supuesto = False
+    if roto:                       # dice «roto» sin decir qué: casi siempre es la pantalla
+        averias, roto, supuesto = ['pantalla'], False, True
     sospecha = 'pide envío o pago por adelantado' if _SOSPECHA.search(texto) else None
     return {'grave': grave, 'averias': averias, 'extras': extras, 'sospecha': sospecha,
-            'marcas': _hay(_MARCAS, texto), 'roto_sin_precisar': roto}
+            'marcas': _hay(_MARCAS, texto), 'roto_sin_precisar': roto, 'supuesto': supuesto,
+            'reacondicionado': bool(re.search(r'reacondicionad', texto, re.I))}
 
 
 # ---------------------------------------------------------------- precios de mercado
@@ -305,7 +309,9 @@ def textos(a):
     if d.get('riesgo') in ('alto', 'medio'):
         preg.append('¿Por qué lo vendes tan barato? ¿Tienes la factura de compra a tu nombre?')
         preg.append('¿Está pagado del todo (sin financiación pendiente) y comprado en España?')
-    if 'pantalla' in est['averias']:
+    if est.get('supuesto'):
+        preg.append('¿Qué tiene roto exactamente: la pantalla, la parte de atrás u otra cosa? ¿Funciona todo lo demás?')
+    elif 'pantalla' in est['averias']:
         preg.append('¿El táctil responde en toda la pantalla, también encima de las grietas? ¿Se ven manchas o líneas?')
     if 'trasera' in est['averias']:
         preg.append('¿Solo está roto el cristal de atrás o también las lentes de las cámaras?')

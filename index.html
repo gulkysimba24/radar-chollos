@@ -15,7 +15,7 @@
   --bg: #0A0D12; --surface: #121821; --surface2: #18202B; --line: #243040; --line2: #2E3B4D;
   --ink: #E9EEF4; --muted: #92A0B0; --faint: #64727F;
   --chollazo: #FF4655; --chollazo-glow: rgba(255, 70, 85, .55);
-  --bueno: #23C38A; --normal: #4C8DF0; --trampa: #B184FF; --ofrece: #F5A524; --off: #5B6673; --estrella: #FFC94A;
+  --bueno: #23C38A; --normal: #4C8DF0; --trampa: #B184FF; --regatear: #7A8BA3; --ofrece: #F5A524; --off: #5B6673; --estrella: #FFC94A;
   --r: 14px; --nav: 64px;
 }
 * { box-sizing: border-box; }
@@ -55,7 +55,7 @@ button.tile { cursor: pointer; }
 .tile span { display: block; font-size: 12px; color: var(--muted); font-weight: 600; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .tile[aria-pressed="true"] { background: var(--surface2); border-color: var(--c); box-shadow: 0 0 0 1px var(--c) inset; }
 .tile.chollazo { --c: var(--chollazo); } .tile.bueno { --c: var(--bueno); } .tile.normal { --c: var(--normal); }
-.tile.trampa { --c: var(--trampa); border-style: dashed; } .tile.trampa[aria-pressed="true"] { border-style: solid; }
+.tile.trampa { --c: var(--trampa); border-style: dashed; } .tile.regatear { --c: var(--regatear); } .tile.trampa[aria-pressed="true"] { border-style: solid; }
 .tile.verde { --c: var(--bueno); } .tile.ambar { --c: var(--ofrece); } .tile.azul { --c: var(--normal); } .tile.rojo { --c: var(--chollazo); }
 
 .controls { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 10px; }
@@ -78,6 +78,7 @@ input[type=checkbox] { accent-color: var(--chollazo); width: 16px; height: 16px;
 .lp { display: inline-flex; align-items: center; gap: 3px; height: 20px; padding: 0 7px; border-radius: 999px; background: var(--c); color: #fff; font: 800 12px/1 "Barlow Condensed", sans-serif; }
 .lp svg { width: 11px; height: 11px; fill: currentColor; }
 .lp.chollazo { --c: var(--chollazo); } .lp.bueno { --c: var(--bueno); } .lp.normal { --c: var(--normal); }
+.lp.regatear { --c: #3A4556; color: #C9D3DF; }
 .lp.trampa { --c: #2A2140; color: var(--trampa); outline: 1.5px dashed var(--trampa); }
 
 .layout { display: grid; grid-template-columns: 1fr; gap: 14px; }
@@ -104,6 +105,8 @@ input[type=checkbox] { accent-color: var(--chollazo); width: 16px; height: 16px;
 .pin .star { position: absolute; top: -9px; right: -7px; width: 18px; height: 18px; border-radius: 50%; background: var(--estrella); color: #241a00; display: grid; place-items: center; font-size: 11px; box-shadow: 0 0 0 2px var(--bg); }
 .pin.chollazo { --c: var(--chollazo); height: 30px; font-size: 17px; padding: 0 11px 0 9px; z-index: 2; animation: resalta 2.2s ease-in-out infinite; }
 .pin.bueno { --c: var(--bueno); } .pin.normal { --c: var(--normal); }
+.pin.regatear { --c: #3A4556; color: #C9D3DF; height: 22px; font-size: 13px; padding: 0 7px 0 6px; opacity: .9; }
+.pin .ma { font: 800 9px/1 Figtree, sans-serif; background: #FFD43B; color: #1b1b1b; border-radius: 4px; padding: 2px 3px; margin-left: 2px; }
 .pin.trampa { --c: #2A2140; color: var(--trampa); outline: 2px dashed var(--trampa); outline-offset: -1px; }
 .pin.trampa::after { border-top-color: var(--trampa); }
 .pin .q { display: inline-grid; place-items: center; width: 16px; height: 16px; border-radius: 50%; background: var(--trampa); color: #1A1230; font-size: 12px; margin-left: 2px; }
@@ -126,7 +129,7 @@ input[type=checkbox] { accent-color: var(--chollazo); width: 16px; height: 16px;
 .card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); overflow: hidden; position: relative; scroll-margin-top: 12px; }
 .card::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: var(--c, var(--line2)); }
 .card.chollazo { --c: var(--chollazo); border-color: rgba(255,70,85,.55); box-shadow: 0 0 24px -8px var(--chollazo-glow); }
-.card.bueno { --c: var(--bueno); } .card.normal { --c: var(--normal); }
+.card.bueno { --c: var(--bueno); } .card.normal { --c: var(--normal); } .card.regatear { --c: var(--regatear); }
 .card.trampa { --c: var(--trampa); border: 1.5px dashed rgba(177,132,255,.6); }
 .card.vendido { --c: var(--off); opacity: .6; }
 .card.estrella { --c: var(--estrella); }
@@ -273,6 +276,7 @@ dialog .df .btn { flex: 1; }
       <button type="button" class="tile normal" data-niv="normal" aria-pressed="false"><b id="n-normal">0</b><span>Normales</span></button>
       <button type="button" class="tile trampa" data-niv="trampa" aria-pressed="false"><b id="n-trampa">0</b><span>¿Trampa?</span></button>
     </div>
+    <button type="button" class="tile regatear" data-niv="regatear" aria-pressed="false" style="width:100%;margin:-2px 0 10px;display:flex;align-items:center;gap:10px"><b id="n-regatear" style="font-size:22px">0</b><span style="margin:0">🤝 Para regatear: casi chollos si consigues bajarlos un poco</span></button>
     <div class="controls">
       <div class="seg" role="group" aria-label="Marca">
         <button type="button" data-fam="todos" aria-pressed="true">Todos</button>
@@ -287,7 +291,9 @@ dialog .df .btn { flex: 1; }
       <div class="row">
         <label for="km">Hasta <b id="kmv">60 km</b> <input type="range" id="km" min="5" max="60" step="5" value="60"></label>
         <label for="orden">Ordenar <select id="orden"><option value="beneficio">Más beneficio</option><option value="km">Más cerca</option><option value="nuevo">Más nuevos</option><option value="rapido">Se venden antes</option></select></label>
+        <label for="pmax">Precio hasta <b id="pmaxv">1000 €</b> <input type="range" id="pmax" min="0" max="1000" step="10" value="1000"></label>
         <label for="vend"><input type="checkbox" id="vend"> Ver vendidos</label>
+        <label for="verdesc"><input type="checkbox" id="verdesc"> Ver descartados (<span id="ndesc">0</span>)</label>
       </div>
     </div>
     <div class="legend" aria-label="Leyenda del mapa">
@@ -295,6 +301,8 @@ dialog .df .btn { flex: 1; }
       <span><i class="lp bueno" id="lg-2"></i>Bueno</span>
       <span><i class="lp normal" id="lg-3"></i>Normal</span>
       <span><i class="lp trampa" id="lg-4"></i>Posible trampa</span>
+      <span><i class="lp regatear" id="lg-6"></i>Para regatear</span>
+      <span><i class="lp normal">MA</i>Milanuncios</span>
       <span><i class="lp normal" id="lg-5"></i>Para reparar</span>
       <span>⭐ Guardado</span>
     </div>
@@ -338,8 +346,8 @@ dialog .df .btn { flex: 1; }
     <p class="sub">Los anuncios que habéis guardado vosotros. Al guardar uno, al otro le llega un aviso en Telegram.</p>
     <div class="panel">
       <form class="form" id="f-enlace">
-        <label>Guardar un anuncio de Wallapop que no esté en el radar
-          <input type="url" id="enlace-url" placeholder="Pega aquí el enlace del anuncio" inputmode="url" required></label>
+        <label>Guardar un anuncio de Wallapop o Milanuncios que no esté en el radar
+          <input type="url" id="enlace-url" placeholder="Pega aquí el enlace (Wallapop o Milanuncios)" inputmode="url" required></label>
         <label>Nota (opcional)<input type="text" id="enlace-nota" placeholder="Ej.: le he escrito, contesta mañana" maxlength="140"></label>
         <button class="btn main grande" type="submit">⭐ Guardar y avisar</button>
         <span class="hint">El bot lo analiza (precio máximo, oferta y preguntas) y os avisa en Telegram en 1 o 2 minutos.</span>
@@ -569,9 +577,9 @@ async function cambiar(path, defecto, fn, mensaje) {
 // ------------------------------------------------------------------ datos
 let data = { chollos: [] }, estudio = {}, info = {}, guardados = { items: {} }, registro = { compras: [] };
 let homeLL = [40.2842, -3.7942], map, layer;
-const S = Object.assign({ fam: 'todos', tipo: 'todos', niv: 'todos', km: 60, orden: 'beneficio', vend: false, tab: 'mapa', rf: 'todos', et: 'listo', eo: 'vendidos' }, leer('radar-f3', {}));
+const S = Object.assign({ fam: 'todos', tipo: 'todos', niv: 'todos', km: 60, pmax: 1000, verdesc: false, orden: 'beneficio', vend: false, tab: 'mapa', rf: 'todos', et: 'listo', eo: 'vendidos' }, leer('radar-f3', {}));
 S.sel = '';
-const saveS = () => escribir('radar-f3', { fam: S.fam, tipo: S.tipo, niv: S.niv, km: S.km, orden: S.orden, vend: S.vend, tab: S.tab, rf: S.rf, et: S.et, eo: S.eo });
+const saveS = () => escribir('radar-f3', { fam: S.fam, tipo: S.tipo, niv: S.niv, km: S.km, pmax: S.pmax, verdesc: S.verdesc, orden: S.orden, vend: S.vend, tab: S.tab, rf: S.rf, et: S.et, eo: S.eo });
 
 async function pages(nombre, defecto) {
   try { const r = await fetch(nombre + '?t=' + Date.now(), { cache: 'no-store' }); if (!r.ok) return defecto; return await r.json(); } catch (e) { return defecto; }
@@ -586,6 +594,10 @@ async function cargarPropios() {
   guardados = await pages('guardados.json', { items: {} });
   registro = await pages('registro.json', { compras: [] });
 }
+async function cargarDescartados() {
+  if (AJ.token) { try { descartados = (await ghLeer('descartados.json', { items: {} })).json; return; } catch (e) {} }
+  descartados = await pages('descartados.json', { items: {} });
+}
 
 // ------------------------------------------------------------------ chollos / mapa
 const MINIMO = { iphone_listo: 25, iphone_reparar: 40, android_listo: 60, android_reparar: 80 };
@@ -595,7 +607,7 @@ function cat(c) {
   const v = (c.beneficio || 0) / (MINIMO[c.familia + '_' + c.tipo] || 30);
   return v >= 2.5 ? 'chollazo' : v >= 1.6 ? 'bueno' : 'normal';
 }
-const CAT_TXT = { chollazo: '🔥 Chollazo', bueno: 'Chollo bueno', normal: 'Chollo normal', trampa: '¿Trampa?' };
+const CAT_TXT = { chollazo: '🔥 Chollazo', bueno: 'Chollo bueno', normal: 'Chollo normal', trampa: '¿Trampa?', regatear: '🤝 Para regatear' };
 const ICO = {
   apple: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16.6 12.7c0-2.5 2-3.7 2.1-3.8-1.2-1.7-3-1.9-3.6-2-1.5-.2-3 .9-3.8.9-.8 0-2-.9-3.3-.8-1.7 0-3.2 1-4.1 2.5-1.8 3-.5 7.6 1.2 10 .8 1.2 1.8 2.6 3.1 2.5 1.2 0 1.7-.8 3.2-.8s1.9.8 3.2.8c1.3 0 2.2-1.2 3-2.4.9-1.4 1.3-2.8 1.3-2.8 0-.1-2.4-.9-2.3-4.1zM14.2 5.2c.7-.8 1.1-1.9 1-3-1 0-2.1.7-2.8 1.5-.6.7-1.2 1.8-1 2.9 1.1.1 2.1-.6 2.8-1.4z"/></svg>',
   android: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 18c0 .55.45 1 1 1h1v3.5a1.5 1.5 0 0 0 3 0V19h2v3.5a1.5 1.5 0 0 0 3 0V19h1c.55 0 1-.45 1-1V8H6v10zM3.5 8A1.5 1.5 0 0 0 2 9.5v7a1.5 1.5 0 0 0 3 0v-7A1.5 1.5 0 0 0 3.5 8zm17 0A1.5 1.5 0 0 0 19 9.5v7a1.5 1.5 0 0 0 3 0v-7A1.5 1.5 0 0 0 20.5 8zm-4.97-5.84 1.3-1.3a.5.5 0 0 0-.7-.7l-1.48 1.48A5.96 5.96 0 0 0 12 1c-.96 0-1.86.23-2.66.63L7.85.15a.5.5 0 0 0-.7.7l1.31 1.31A5.97 5.97 0 0 0 6 7h12a5.97 5.97 0 0 0-2.47-4.84zM10 5H9V4h1v1zm5 0h-1V4h1v1z"/></svg>',
@@ -610,13 +622,38 @@ function gasolina(km) {   // km en línea recta, solo ida
 }
 function maps(c) { return 'https://www.google.com/maps/dir/?api=1&origin=' + encodeURIComponent((data.origen?.nombre || 'Fuenlabrada') + ', Madrid') + '&destination=' + c.lat + ',' + c.lng + '&travelmode=driving'; }
 
+let descartados = { items: {} };
+const DESC_LOCAL = new Set(leer('radar-descartados', []));
+const descartado = id => !!(descartados.items || {})[id] || DESC_LOCAL.has(id);
 function base() {
   return data.chollos.filter(c => (S.fam === 'todos' || c.familia === S.fam) && (S.tipo === 'todos' || c.tipo === S.tipo)
-    && (c.km == null || c.km <= S.km) && (S.vend || c.estado !== 'vendido'));
+    && (c.km == null || c.km <= S.km) && (S.pmax >= 1000 || c.precio <= S.pmax)
+    && (S.vend || c.estado !== 'vendido') && (S.verdesc || !descartado(c.id)));
+}
+async function descartar(id, deshacer) {
+  if (deshacer) DESC_LOCAL.delete(id); else DESC_LOCAL.add(id);
+  escribir('radar-descartados', [...DESC_LOCAL]);
+  if (deshacer && descartados.items) delete descartados.items[id];
+  renderTodo(['mapa', 'gas']);
+  if (!deshacer) {
+    toast('🚫 Quitado del mapa');
+    const t = $('.toast'); const b = document.createElement('button'); b.className = 'btn'; b.style.cssText = 'margin-left:10px;min-height:30px;padding:0 10px';
+    b.textContent = 'Deshacer'; b.onclick = () => { t.hidden = true; descartar(id, true); }; t.append(b);
+  }
+  if (!AJ.token) return;                         // sin clave: solo en este móvil
+  try {
+    descartados = await cambiar('descartados.json', { items: {} }, j => {
+      j.items = j.items || {};
+      if (deshacer) delete j.items[id]; else j.items[id] = { por: AJ.nombre || '', ms: Date.now() };
+      const corte = Date.now() - 10 * 86400000;     // se olvidan a los 10 días (el anuncio ya no estará)
+      for (const [k, v] of Object.entries(j.items)) if (v.ms < corte) delete j.items[k];
+      return j;
+    }, `${deshacer ? 'Recuperar' : 'Descartar'} anuncio${AJ.nombre ? ' (' + AJ.nombre + ')' : ''}`);
+  } catch (err) { if (err.message !== 'sin clave') toast(err.message, true); }
 }
 function visibles() {
-  const l = base().filter(c => S.niv === 'todos' || cat(c) === S.niv);
-  const peso = { chollazo: 3, bueno: 2, normal: 1, trampa: 0 };
+  const l = base().filter(c => S.niv === 'todos' ? cat(c) !== 'regatear' : cat(c) === S.niv);
+  const peso = { chollazo: 3, bueno: 2, normal: 1, trampa: 0, regatear: -1 };
   const pb = c => c.beneficio * (cat(c) === 'trampa' ? 0.4 : c.riesgo === 'medio' ? 0.75 : 1);
   const k = { beneficio: (a, b) => pb(b) - pb(a), km: (a, b) => (a.km ?? 99) - (b.km ?? 99), nuevo: (a, b) => b.avisado_ms - a.avisado_ms,
               rapido: (a, b) => (a.dias_venta ?? 99) - (b.dias_venta ?? 99) || pb(b) - pb(a) }[S.orden];
@@ -628,7 +665,7 @@ function marcador(c) {
     + (k === 'chollazo' ? '<i class="onda"></i><i class="onda o2"></i><i class="onda o3"></i>' : '')
     + (c.familia === 'iphone' ? ICO.apple : ICO.android) + `<span>${Math.round(c.precio)}€</span>`
     + (c.tipo === 'reparar' ? `<span class="rep">${ICO.reparar}</span>` : '')
-    + (k === 'trampa' ? '<span class="q">?</span>' : '')
+    + (k === 'trampa' ? '<span class="q">?</span>' : '') + (c.origen === 'milanuncios' ? '<span class="ma">MA</span>' : '')
     + (guardado(c.id) ? '<span class="star">★</span>' : '') + '</div>';
 }
 function aviso(c) {
@@ -646,6 +683,9 @@ function fichaHTML(c, o = {}) {
   const g = gasolina(c.km);
   const chips = [
     c.reservado && !vend ? `<span class="chip">⏸️ <b>Reservado</b>: puede que lo venda a otro</span>` : '',
+    c.origen === 'milanuncios' ? `<span class="chip">📰 <b>Milanuncios</b> · ubicación aproximada</span>` : '',
+    c.profesional ? `<span class="chip">🏪 Perfil destacado: pregunta si da factura</span>` : '',
+    cat(c) === 'regatear' ? `<span class="chip">🤝 Piden un <b>${Math.round((c.precio / Math.max(c.max, 1) - 1) * 100)} %</b> más que el máximo</span>` : '',
     g ? `<span class="chip">⛽ <b>${eur2(g.euros)}</b> ida y vuelta</span>` : '',
     c.dias_venta != null ? `<span class="chip">⏱️ se vende en <b>~${String(c.dias_venta).replace('.', ',')} días</b></span>` : '',
     c.bateria ? `<span class="chip">🔋 <b>${c.bateria} %</b></span>` : '',
@@ -679,11 +719,12 @@ function fichaHTML(c, o = {}) {
       ${c.mensaje ? `<details><summary>Cómo regatear</summary><p>${esc(c.regateo)}</p><div class="msg">${esc(c.mensaje)}</div>
         <p><button type="button" class="btn" data-copiar="${esc(c.mensaje)}">Copiar mensaje</button></p></details>` : ''}
       <div class="actions">
-        <a class="btn main" href="${esc(c.url)}" target="_blank" rel="noopener">Abrir en Wallapop</a>
+        <a class="btn main" href="${esc(c.url)}" target="_blank" rel="noopener">Abrir en ${c.origen === 'milanuncios' ? 'Milanuncios' : 'Wallapop'}</a>
         ${o.gid ? '' : `<button type="button" class="btn star ${on ? 'on' : ''}" data-guardar="${esc(c.id)}" aria-pressed="${on}">${on ? '★ Guardado' : '☆ Guardar'}</button>`}
         ${c.lat != null ? `<a class="btn" href="${maps(c)}" target="_blank" rel="noopener">Cómo llegar</a>` : ''}
         ${c.lat != null && !o.gid ? `<button type="button" class="btn" data-fly="${esc(c.id)}">Ver en el mapa</button>` : ''}
         <button type="button" class="btn" data-comprar="${esc(o.gid || c.id)}">🛒 Lo hemos comprado</button>
+        ${o.gid ? '' : descartado(c.id) ? `<button type="button" class="btn" data-recuperar="${esc(c.id)}">↩️ Recuperar</button>` : `<button type="button" class="btn peligro" data-descartar="${esc(c.id)}">🚫 No me interesa</button>`}
         ${o.gid ? `<button type="button" class="btn peligro" data-quitar="${esc(o.gid)}">Quitar</button>` : ''}
       </div>
     </div>
@@ -691,21 +732,22 @@ function fichaHTML(c, o = {}) {
 }
 
 function renderMapa() {
-  const cuenta = { chollazo: 0, bueno: 0, normal: 0, trampa: 0 };
+  const cuenta = { chollazo: 0, bueno: 0, normal: 0, trampa: 0, regatear: 0 };
   base().forEach(c => { if (c.estado !== 'vendido') cuenta[cat(c)]++; });
   Object.keys(cuenta).forEach(k => $('#n-' + k).textContent = cuenta[k]);
+  $('#ndesc').textContent = data.chollos.filter(c => descartado(c.id)).length;
   const l = visibles();
   $('#list').innerHTML = l.length ? l.map(c => fichaHTML(c)).join('') :
     `<div class="empty"><b>No hay chollos con estos filtros.</b><br>Prueba a ampliar la distancia o pulsa otra vez el contador marcado para verlos todos. El radar revisa Wallapop cada 15 minutos.</div>`;
   if (!layer) return;
   layer.clearLayers();
-  const z = { chollazo: 1000, bueno: 500, normal: 100, trampa: 50, off: 0 };
+  const z = { chollazo: 1000, bueno: 500, normal: 100, trampa: 50, regatear: 20, off: 0 };
   l.forEach(c => {
     if (c.lat == null) return;
     const k = c.estado === 'vendido' ? 'off' : cat(c);
     const m = L.marker([c.lat, c.lng], { icon: L.divIcon({ className: '', html: marcador(c), iconSize: [0, 0], iconAnchor: [0, 0], popupAnchor: [0, -38] }),
       zIndexOffset: z[k] + (guardado(c.id) ? 300 : 0), title: `${CAT_TXT[k] || 'Vendido'} · ${c.modelo} · ${Math.round(c.precio)} €`, keyboard: true });
-    m.bindPopup(`<b>${CAT_TXT[k] || 'Vendido'}</b><br><b>${esc(c.modelo)}</b> · ${c.tipo === 'listo' ? 'listo para vender' : 'para reparar'}<br>Piden ${eur(c.precio)} · ofrece ${eur(c.oferta)} · ganas ${eur(c.beneficio)}<br>${esc(c.zona || '')}${c.km != null ? ' · ~' + c.km + ' km' : ''}<br><a href="#${esc(c.id)}">Ver ficha</a> · <a href="${esc(c.url)}" target="_blank" rel="noopener">Wallapop</a>`);
+    m.bindPopup(`<b>${CAT_TXT[k] || 'Vendido'}</b><br><b>${esc(c.modelo)}</b> · ${c.tipo === 'listo' ? 'listo para vender' : 'para reparar'}<br>Piden ${eur(c.precio)} · ofrece ${eur(c.oferta)} · ganas ${eur(c.beneficio)}<br>${esc(c.zona || '')}${c.km != null ? ' · ~' + c.km + ' km' : ''}<br><a href="#${esc(c.id)}">Ver ficha</a> · <a href="${esc(c.url)}" target="_blank" rel="noopener">${c.origen === 'milanuncios' ? 'Milanuncios' : 'Wallapop'}</a> · <a href="#" data-descartar="${esc(c.id)}" style="color:#FF8A94">🚫 No me interesa</a>`);
     m.on('click', () => select(c.id, false));
     m.addTo(layer); m._cid = c.id;
   });
@@ -783,8 +825,8 @@ async function quitarGuardado(gid) {
 $('#f-enlace').addEventListener('submit', async e => {
   e.preventDefault();
   const url = $('#enlace-url').value.trim(), nota = $('#enlace-nota').value.trim();
-  if (!/wallapop\.com\/item\//i.test(url)) { toast('Pega el enlace de un anuncio de Wallapop (wallapop.com/item/…)', true); return; }
-  const slug = (url.match(/\/item\/([a-z0-9-]+)/i) || [])[1];
+  if (!/wallapop\.com\/item\/|milanuncios\.com\/.*\d{6,}\.htm/i.test(url)) { toast('Pega el enlace de un anuncio de Wallapop o Milanuncios', true); return; }
+  const slug = (url.match(/\/item\/([a-z0-9-]+)/i) || url.match(/-(\d{6,})\.htm/) || [])[1] || '-';
   const ya = data.chollos.find(c => c.url && c.url.includes(slug));
   const btn = e.submitter; btn.disabled = true;
   try {
@@ -856,6 +898,11 @@ $('#f-analizar').addEventListener('submit', async e => {
   e.preventDefault();
   const url = $('#an-url').value.trim();
   if (!url) { calcularAnalisis(); return; }
+  if (/milanuncios\.com/i.test(url)) {
+    $('#an-res').innerHTML = `<div class="empty"><b>Los anuncios de Milanuncios los analiza el bot.</b><br>Milanuncios no deja que la web los lea directamente. Pégalo en <b>Guardados</b> y en 1–2 minutos lo tienes analizado (y avisado en Telegram).<p><button type="button" class="btn main" id="an-a-guardados">Ir a Guardados con este enlace</button></p></div>`;
+    $('#an-a-guardados').onclick = () => { $('#enlace-url').value = url; irA('guardados'); $('#enlace-url').focus(); };
+    return;
+  }
   const slug = (url.match(/\/item\/([a-z0-9-]+)/i) || [])[1];
   if (!slug) { toast('Pega el enlace de un anuncio de Wallapop (wallapop.com/item/…)', true); return; }
   if (!AN) { toast('Aún no hay datos de precios: espera a la próxima pasada del bot', true); return; }
@@ -1286,6 +1333,7 @@ function syncControls() {
   $$('[data-niv]').forEach(b => b.setAttribute('aria-pressed', b.dataset.niv === S.niv));
   $$('[data-rf]').forEach(b => b.setAttribute('aria-pressed', b.dataset.rf === S.rf));
   $$('[data-et]').forEach(b => b.setAttribute('aria-pressed', b.dataset.et === S.et));
+  $('#pmax').value = S.pmax; $('#pmaxv').textContent = S.pmax >= 1000 ? 'sin límite' : S.pmax + ' €'; $('#verdesc').checked = S.verdesc;
   $('#km').value = S.km; $('#kmv').textContent = S.km + ' km'; $('#orden').value = S.orden; $('#vend').checked = S.vend; $('#est-orden').value = S.eo;
 }
 const cambio = (k, v, que) => { S[k] = v; saveS(); syncControls(); renderTodo(que); };
@@ -1297,14 +1345,18 @@ $$('[data-et]').forEach(b => b.onclick = () => cambio('et', b.dataset.et, ['est'
 $('#km').oninput = e => { S.km = +e.target.value; $('#kmv').textContent = S.km + ' km'; saveS(); renderTodo(['mapa']); };
 $('#orden').onchange = e => cambio('orden', e.target.value, ['mapa']);
 $('#vend').onchange = e => cambio('vend', e.target.checked, ['mapa']);
+$('#verdesc').onchange = e => cambio('verdesc', e.target.checked, ['mapa']);
+$('#pmax').oninput = e => { S.pmax = +e.target.value; $('#pmaxv').textContent = S.pmax >= 1000 ? 'sin límite' : S.pmax + ' €'; saveS(); renderTodo(['mapa']); };
 $('#est-orden').onchange = e => cambio('eo', e.target.value, ['est']);
 $('#btn-nueva').onclick = () => { abrirCompra.pre = null; abrirCompra(null); };
 $$('[data-cerrar]').forEach(b => b.onclick = () => b.closest('dialog').close());
 
 document.addEventListener('click', async e => {
-  const t = e.target.closest('[data-fly],[data-copiar],[data-guardar],[data-quitar],[data-comprar],[data-vender],[data-texto],[data-editar]');
+  const t = e.target.closest('[data-fly],[data-copiar],[data-guardar],[data-quitar],[data-comprar],[data-vender],[data-texto],[data-editar],[data-descartar],[data-recuperar]');
   if (!t) return;
   const d = t.dataset;
+  if (d.descartar) { e.preventDefault(); map && map.closePopup(); return descartar(d.descartar); }
+  if (d.recuperar) return descartar(d.recuperar, true);
   if (d.fly) { select(d.fly); $('#map').scrollIntoView({ block: 'start' }); }
   else if (d.copiar != null) copiar(d.copiar, t);
   else if (d.guardar) toggleGuardar(d.guardar, t);
@@ -1358,7 +1410,7 @@ function renderTodo(que = ['mapa', 'guard', 'reg', 'est', 'gas']) {
   if (que.includes('gas')) renderGasolina();
 }
 async function recargar(first) {
-  const [d, e, i, an] = await Promise.all([pages('chollos.json', null), pages('estudio.json', {}), pages('guardados_info.json', {}), pages('analizador.json', null), cargarPropios()]);
+  const [d, e, i, an] = await Promise.all([pages('chollos.json', null), pages('estudio.json', {}), pages('guardados_info.json', {}), pages('analizador.json', null), cargarPropios(), cargarDescartados()]);
   if (an) AN = an;
   if (!d) { $('#updated').textContent = 'No se pudieron cargar los datos'; return; }
   data = d; estudio = e || {}; info = i || {};
@@ -1380,7 +1432,7 @@ const Encuadre = L.Control.extend({ options: { position: 'bottomright' }, onAdd(
 new Encuadre().addTo(map);
 layer = L.layerGroup().addTo(map);
 $('#lg-1').innerHTML = ICO.apple + '420'; $('#lg-2').innerHTML = ICO.apple + '310'; $('#lg-3').innerHTML = ICO.android + '180';
-$('#lg-4').innerHTML = ICO.apple + '150 ?'; $('#lg-5').innerHTML = ICO.apple + '90 ' + ICO.reparar;
+$('#lg-4').innerHTML = ICO.apple + '150 ?'; $('#lg-6').innerHTML = ICO.apple + '280'; $('#lg-5').innerHTML = ICO.apple + '90 ' + ICO.reparar;
 syncControls();
 irA(['analizar', 'guardados', 'registro', 'estudio', 'gasolina'].includes(location.hash.slice(1)) ? location.hash.slice(1) : (location.hash.length > 1 ? 'mapa' : S.tab), true);
 recargar(true);

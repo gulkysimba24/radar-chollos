@@ -10,7 +10,7 @@ import urllib.parse
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
-import analisis, config, mercado, telegram, wallapop
+import analisis, config, mercado, milanuncios, telegram, wallapop
 
 RAIZ = os.path.dirname(os.path.abspath(__file__))
 DATOS = RAIZ   # todo va en la carpeta principal del repositorio
@@ -60,6 +60,11 @@ def anotar_precio(precios, nombre, item_id, precio, cap):
     precios[nombre] = [x for x in lista if x[2] >= corte][-150:]
 
 
+def detalle(item_id):
+    """Ficha completa del anuncio, venga de Wallapop o de Milanuncios."""
+    return (milanuncios.detalle if str(item_id).startswith('ma-') else wallapop.detalle)(item_id)
+
+
 VENTAS = []          # ventas vistas por la memoria del mercado (se cargan en ejecutar)
 
 
@@ -68,7 +73,7 @@ def pedidos(precios, nombre, cap):
     lista = precios.get(nombre, [])
     misma = sorted(x[1] for x in lista if cap and x[3] == cap)
     todos = sorted(x[1] for x in lista)
-    ps = misma if len(misma) >= 6 else todos if len(todos) >= 6 else None
+    ps = misma if len(misma) >= 6 else todos if len(todos) >= 4 else None
     if not ps:
         return None
     return mercado._q(ps, .25), statistics.median(ps), mercado._q(ps, .75), len(ps)
@@ -140,7 +145,7 @@ def referencia(precios, nombre, cap):
         m = analisis.mediana(misma, 6)
         if m:
             return m
-    return analisis.mediana([x[1] for x in lista], 6)
+    return analisis.mediana([x[1] for x in lista], 4)
 
 
 # ------------------------------------------------------------------ mensajes
@@ -188,11 +193,21 @@ def texto_aviso(a, cabecera=None):
         lineas += [cabecera, '']
     cat = {'chollazo': '🔥🔥 <b>CHOLLAZO · compra ya</b>', 'bueno': '💚 <b>Chollo bueno</b>',
            'normal': '🔵 Chollo normal',
+           'regatear': f"🤝 <b>Para regatear</b>: piden un {round((a['precio'] / max(d['max_pagar'], 1) - 1) * 100)} % más que el máximo",
            'trampa': f"🟣 <b>¿TRAMPA?</b> {e(d.get('motivo_trampa') or '')}. Puede ser estafa o tener algo oculto, aunque a veces es un chollo real."
            }.get(d.get('categoria'), '🔵 Chollo normal')
     if d.get('categoria') == 'trampa':
         riesgo = 'Pide factura y foto del IMEI en Ajustes antes de quedar. Nunca pagues ni envíes nada por adelantado.'
-    lineas += [cat, titulo, tipo] + ([riesgo] if riesgo else []) + [
+    extra = []
+    if a.get('origen') == 'milanuncios':
+        extra.append('📰 Anuncio de <b>Milanuncios</b> (ubicación aproximada: solo el pueblo)')
+    if a.get('tienda'):
+        extra.append('🏪 Perfil destacado: puede ser un revendedor, pregunta si da factura')
+    if a['est'].get('reacondicionado'):
+        extra.append('♻️ Dice «reacondicionado»: pregunta dónde se compró y si conserva la garantía')
+    if a['est'].get('supuesto'):
+        extra.append('❓ Dice que está roto pero no qué: se calcula como si fuera la pantalla')
+    lineas += [cat, titulo, tipo] + ([riesgo] if riesgo else []) + extra + [
         '',
         f"💶 Piden <b>{a['precio']:.0f} €</b> → ofrece <b>{d['oferta']} €</b> · máximo <b>{d['max_pagar']} €</b>",
         f"📈 Se vende por ~{d['venta']} € · ganas <b>{'+' if d['beneficio_oferta'] > 0 else ''}{d['beneficio_oferta']} €</b> con tu oferta"
@@ -205,7 +220,7 @@ def texto_aviso(a, cabecera=None):
         f"🔎 {e(a['resumen'])}",
     ]
     cont = a.get('contadores') or {}
-    actividad = f"🕒 Publicado {hace(a.get('publicado_ms'))}"
+    actividad = f"🕒 Publicado {hace(a.get('publicado_ms'))}" if a.get('publicado_ms') else '🕒'
     if cont:
         actividad += f" · 👀 {cont.get('views', 0)} visitas · ❤️ {cont.get('favorites', 0)} · 💬 {cont.get('conversations', 0)} chats"
     lineas += [actividad, '', '<b>Pregunta antes de ir:</b>']
@@ -255,7 +270,8 @@ def preparar(item):
         'precio': float(item['price']['amount']), 'capacidad': analisis.capacidad(texto), 'bateria': analisis.bateria(texto),
         'zona': loc.get('city'), 'lat': loc.get('latitude'), 'lng': loc.get('longitude'),
         'km': analisis.km(loc.get('latitude'), loc.get('longitude')),
-        'url': f"https://es.wallapop.com/item/{item.get('web_slug')}", 'publicado_ms': item.get('created_at'),
+        'url': item.get('url') or f"https://es.wallapop.com/item/{item.get('web_slug')}", 'publicado_ms': item.get('created_at'),
+        'origen': item.get('origen', 'wallapop'),
         'tienda': wallapop.flag(item.get('is_top_profile')),
         'est': analisis.estado(titulo, desc),
         'foto': (((item.get('images') or [{}])[0].get('urls') or {}).get('medium')),
@@ -264,7 +280,7 @@ def preparar(item):
 
 def completar(a):
     """Añade datos de la ficha completa: estado según Wallapop, capacidad, visitas."""
-    det = wallapop.detalle(a['id'])
+    det = detalle(a['id'])
     if det is None:
         return False
     if isinstance(det, dict):
@@ -292,16 +308,38 @@ def ficha_web(a, estado='activo'):
         'riesgo': d.get('riesgo'), 'pct_mercado': d.get('pct_mercado'), 'categoria': d.get('categoria'),
         'motivo_trampa': d.get('motivo_trampa'), 'foto': a.get('foto'), 'bateria': a.get('bateria'),
         'dias_venta': a.get('dias_venta'), 'fuente_venta': d.get('fuente_venta'), 'coste_reparacion': d.get('coste_reparacion'),
+        'origen': a.get('origen', 'wallapop'), 'profesional': bool(a.get('tienda')),
         'reservado': bool(a.get('reservado')), 'precio_bueno': d.get('precio_bueno'), 'limite': d.get('limite'), 'venta_rango': d.get('venta_rango'),
         'fiabilidad': d.get('fiabilidad'), 'factor_estado': d.get('factor_estado'),
         'precio_inicial': a.get('precio_inicial', a['precio']),
     }
 
 
+DESCARTADOS = set()   # anuncios que habéis marcado «No me interesa» en la web
+
+
+def interesa(a, d=None):
+    """False si es algo que ahora no queréis ver: descartado, o iPhone roto que no sea una ganga."""
+    d = d or a.get('eval') or {}
+    if a['id'] in DESCARTADOS:
+        return False
+    if (getattr(config, 'SOLO_ROTOS_CHOLLAZO', False) and a.get('familia') == 'iphone'
+            and d.get('tipo') == 'reparar' and d.get('categoria') != 'chollazo'):
+        return False
+    return True
+
+
 def avisar(a, temas, activos, cabecera=None):
     a['resumen'], a['preguntas'], a['regateo'], a['mensaje'] = analisis.textos(a)
     a['avisado_ms'] = ahora_ms()
-    msg = telegram.enviar(texto_aviso(a, cabecera), temas.get(tema_de(a)), botones(a), silencioso=silencio(), foto=a.get('foto'))
+    callado = silencio() or a['eval'].get('categoria') == 'regatear'
+    if a.get('publicado_ms') and a['publicado_ms'] < ahora_ms() - 48 * 3600000 and not cabecera:
+        # anuncio de hace días que el bot no había visto (búsqueda nueva o Milanuncios): al mapa, sin aviso
+        a['msg_id'] = None
+        activos[a['id']] = {k: v for k, v in a.items() if k != 'est'} | {'est': a['est']}
+        return True
+    msg = telegram.enviar(texto_aviso(a, cabecera), temas.get(tema_de(a)), botones(a), silencioso=callado, foto=a.get('foto'),
+                          clave=tema_de(a))
     if msg is None:
         return False
     a['msg_id'] = msg
@@ -316,7 +354,7 @@ def revisar_conocidos(activos, vigilar, temas, precios):
     pendientes = sorted([a for a in activos.values() if a.get('estado', 'activo') == 'activo' and a['avisado_ms'] >= limite],
                         key=lambda a: a.get('revisado_ms', 0))[:80]
     for a in pendientes:
-        det = wallapop.detalle(a['id'])
+        det = detalle(a['id'])
         a['revisado_ms'] = ahora_ms()
         if det == 'error':
             continue
@@ -337,14 +375,16 @@ def revisar_conocidos(activos, vigilar, temas, precios):
                 a['eval'] = d
             a['resumen'], a['preguntas'], a['regateo'], a['mensaje'] = analisis.textos(a)
             telegram.editar(a.get('msg_id'), f'📉 <b>Ha bajado de {antes:.0f} € a {nuevo:.0f} €</b>\n\n' + texto_aviso(a), botones(a), foto=a.get('foto'))
-            telegram.responder(a.get('msg_id'), f'📉 {html.escape(a["modelo"])} ha bajado a <b>{nuevo:.0f} €</b>', temas.get(tema_de(a)))
+            if a['id'] not in DESCARTADOS:
+                telegram.responder(a.get('msg_id'), f'📉 {html.escape(a["modelo"])} ha bajado a <b>{nuevo:.0f} €</b>',
+                                   temas.get(tema_de(a)), clave=tema_de(a))
             avisos += 1
         time.sleep(0.4)
 
-    for vid, a in sorted(vigilar.items(), key=lambda kv: kv[1].get('revisado_ms', 0))[:30]:
-        det = wallapop.detalle(vid)
+    for vid, a in sorted(vigilar.items(), key=lambda kv: kv[1].get('revisado_ms', 0))[:60]:
+        det = detalle(vid)
         a['revisado_ms'] = ahora_ms()
-        if det is None or a['avisado_ms_vigilar'] < ahora_ms() - 10 * 86400000:
+        if det is None or (isinstance(det, dict) and wallapop.flag(det.get('sold'))) or a['avisado_ms_vigilar'] < ahora_ms() - 10 * 86400000:
             vigilar.pop(vid, None)
             continue
         if det == 'error':
@@ -366,7 +406,7 @@ def revisar_conocidos(activos, vigilar, temas, precios):
     return avisos
 
 
-def exportar(activos):
+def exportar(activos, vigilados=None):
     limite = ahora_ms() - config.DIAS_ACTIVO * 86400000
     lista = []
     for a in activos.values():
@@ -374,7 +414,20 @@ def exportar(activos):
             continue
         if a.get('estado') == 'vendido' and a.get('revisado_ms', 0) < ahora_ms() - 86400000:
             continue
+        if not interesa(a):
+            continue
         lista.append(ficha_web(a, a.get('estado', 'activo')))
+    for a in (vigilados or {}).values():           # casi chollos que el bot vigila: en el mapa como «para regatear»
+        if a.get('avisado_ms_vigilar', 0) < limite or not a.get('eval') or a['id'] in activos or not interesa(a):
+            continue
+        if 'resumen' not in a:
+            a['resumen'], a['preguntas'], a['regateo'], a['mensaje'] = analisis.textos(a)
+        a.setdefault('avisado_ms', a['avisado_ms_vigilar'])
+        f = ficha_web(a)
+        if f['categoria'] != 'trampa':
+            f['categoria'] = 'regatear'
+        f['vigilado'] = True
+        lista.append(f)
     lista.sort(key=lambda x: -x['avisado_ms'])
     guardar('chollos.json', {'actualizado_ms': ahora_ms(), 'origen': {'nombre': config.ORIGEN_NOMBRE, 'lat': config.ORIGEN[0], 'lng': config.ORIGEN[1]},
                              'chollos': lista}, carpeta=WEB)
@@ -389,11 +442,15 @@ def item_de_detalle(det):
         'price': {'amount': ((det.get('price') or {}).get('cash') or {}).get('amount') or 0},
         'images': det.get('images'), 'location': det.get('location'), 'web_slug': det.get('slug'),
         'reserved': det.get('reserved'), 'is_top_profile': (det.get('user') or {}).get('is_top_profile'),
+        'url': det.get('url'), 'origen': 'milanuncios' if str(det.get('id', '')).startswith('ma-') else 'wallapop',
     }
 
 
 def id_de_enlace(url):
     """Saca el id interno de Wallapop de un enlace tipo https://es.wallapop.com/item/iphone-13-...-1234567890."""
+    ma = re.search(r'milanuncios\.com/.*?-(\d{6,})\.htm', url or '')
+    if ma:
+        return 'ma-' + ma.group(1)
     m = re.search(r'/item/([a-z0-9-]+)', url or '')
     if not m:
         return None
@@ -447,7 +504,7 @@ def valorar(a, precios):
 
 
 def analizar_guardado(wid, precios):
-    det = wallapop.detalle(wid)
+    det = detalle(wid)
     if det is None:
         return {'estado': 'vendido', 'revisado_ms': ahora_ms()}
     if not isinstance(det, dict):
@@ -545,7 +602,7 @@ def procesar_web(temas, activos, precios, revisar_estado=False):
         pend = sorted([(gid, i) for gid, i in info.items() if i.get('wid') and i.get('estado') == 'activo'],
                       key=lambda kv: kv[1].get('revisado_ms', 0))[:25]
         for gid, i in pend:
-            det = wallapop.detalle(i['wid'])
+            det = detalle(i['wid'])
             i['revisado_ms'] = ahora_ms()
             nombre = e(nombre_guardado(guardados.get(gid, {}), i))
             if det is None or (isinstance(det, dict) and wallapop.flag(det.get('sold'))):
@@ -655,6 +712,50 @@ def aprender_y_estudiar(precios, seguidos, registro, condicion=None):
         guardar('estudio.json', nuevo)
 
 
+def revisar_bajadas(ids, precios, temas, activos, vigilar, vistos):
+    """Anuncios seguidos que han bajado de precio: si ahora son chollo (o casi), se avisa."""
+    n = 0
+    for iid in ids[:20]:
+        if iid in activos:
+            continue                                   # los avisados ya se revisan aparte
+        det = detalle(iid)
+        if not isinstance(det, dict):
+            continue
+        a = preparar(item_de_detalle(det))
+        if not a:
+            continue
+        ref = referencia(precios, a['modelo'], a['capacidad'])
+        if not ref:
+            continue
+        poner_venta(a, precios)
+        veredicto, d = evaluar(a, ref)
+        regatear = veredicto == 'vigilar' and a['precio'] <= d['max_pagar'] * config.REGATEO_AVISO
+        if veredicto != 'avisar' and not regatear:
+            continue
+        if regatear and d['categoria'] != 'trampa':
+            d['categoria'] = 'regatear'
+        a['eval'] = d
+        if not interesa(a):
+            continue
+        vigilar.pop(iid, None)
+        if completar(a) and avisar(a, temas, activos, cabecera='📉 <b>Ha bajado de precio</b> y ahora sale a cuenta'):
+            n += 1
+        vistos[iid] = ahora_ms()
+        time.sleep(0.5)
+    return n
+
+
+def duplicado(a, activos):
+    """El mismo móvil anunciado en Wallapop y en Milanuncios (mismo modelo, precio y pueblo en 3 días)."""
+    corte = ahora_ms() - 3 * 86400000
+    for b in activos.values():
+        if (b.get('origen', 'wallapop') != a.get('origen', 'wallapop') and b['modelo'] == a['modelo']
+                and abs(b['precio'] - a['precio']) <= 5 and (b.get('zona') or '').lower() == (a.get('zona') or '').lower()
+                and b.get('avisado_ms', 0) >= corte):
+            return True
+    return False
+
+
 def barrer(seguidos, precios, vistos_items, vistos, activos, vigilar):
     """Repasa a fondo un par de modelos de iPhone por pasada para seguir todos los anuncios a la venta.
     Si encuentra uno publicado en las últimas 24 h que se nos había escapado, lo devuelve para analizarlo."""
@@ -676,7 +777,7 @@ def barrer(seguidos, precios, vistos_items, vistos, activos, vigilar):
             if not (e['grave'] or e['averias'] or e['extras'] or e['roto_sin_precisar']) and not a['tienda']:
                 anotar_precio(precios, a['modelo'], a['id'], a['precio'], a['capacidad'])
             reciente = (a.get('publicado_ms') or 0) >= ahora_ms() - 86400000
-            if reciente and not a['tienda'] and a['id'] not in vistos and a['id'] not in activos and a['id'] not in vigilar:
+            if reciente and a['id'] not in vistos and a['id'] not in activos and a['id'] not in vigilar:
                 nuevos.append(a)
     est['i'] = (est['i'] + config.BARRIDO_POR_VEZ) % len(lista)
     guardar('barrido.json', est)
@@ -736,6 +837,7 @@ def ejecutar():
     seguidos = cargar('mercado.json', {})
     VENTAS = cargar('ventas.json', [])
     condicion = mercado.aprender_condicion(VENTAS)
+    DESCARTADOS.update(cargar('descartados.json', {}).get('items', {}))
     temas = telegram.preparar_temas(cargar('temas.json', {}))
     mercado.aprender(cargar('registro.json', {}), lambda m, c: estimar_venta(precios, m, c))
 
@@ -753,7 +855,25 @@ def ejecutar():
             limpio = not (est['grave'] or est['averias'] or est['extras'] or est['roto_sin_precisar'])
             if limpio and not a['tienda']:
                 anotar_precio(precios, a['modelo'], a['id'], a['precio'], a['capacidad'])
-            if a['id'] in vistos or a['id'] in activos or a['id'] in vigilar or a['tienda']:
+            if a['id'] in vistos or a['id'] in activos or a['id'] in vigilar:
+                continue
+            nuevos.append(a)
+
+    de_milanuncios = 0
+    for texto, cuantos, cat in getattr(config, 'MILANUNCIOS', []):
+        for it in milanuncios.buscar(texto, cuantos, cat):
+            if it['id'] in vistos_items:
+                continue
+            vistos_items[it['id']] = True
+            a = preparar(it)
+            if not a or a.get('km') is None or a['km'] > config.RADIO_KM:
+                continue
+            de_milanuncios += 1
+            mercado.seguir(seguidos, a)
+            est = a['est']
+            if not (est['grave'] or est['averias'] or est['extras'] or est['roto_sin_precisar']) and not a['tienda']:
+                anotar_precio(precios, a['modelo'], a['id'], a['precio'], a['capacidad'])
+            if a['id'] in vistos or a['id'] in activos or a['id'] in vigilar:
                 continue
             nuevos.append(a)
 
@@ -766,24 +886,36 @@ def ejecutar():
         ref = referencia(precios, a['modelo'], a['capacidad'])
         poner_venta(a, precios)
         veredicto, d = evaluar(a, ref)
-        if veredicto == 'vigilar':
+        if veredicto == 'vigilar' and a['precio'] <= d['max_pagar'] * config.REGATEO_AVISO:
+            if d['categoria'] != 'trampa':
+                d['categoria'] = 'regatear'
+            a['eval'] = d
+            if interesa(a):
+                candidatos.append(a)
+        elif veredicto == 'vigilar':
             a['eval'], a['ref'], a['avisado_ms_vigilar'] = d, ref, ahora_ms()
             vigilar[a['id']] = {k: v for k, v in a.items()}
         elif veredicto == 'avisar':
             a['eval'] = d
-            candidatos.append(a)
+            if interesa(a):
+                candidatos.append(a)
         if ref:                      # sin precio de referencia aún: se mirará otra vez cuando lo haya
             vistos[a['id']] = ahora_ms()
 
-    candidatos.sort(key=lambda a: -a['eval']['beneficio_oferta'])
+    candidatos.sort(key=lambda a: (a['eval']['categoria'] == 'regatear', -a['eval']['beneficio_oferta']))
     for a in candidatos:
+        if duplicado(a, activos):
+            vistos[a['id']] = ahora_ms()
+            continue
         if completar(a) and avisar(a, temas, activos):
             avisados += 1
         time.sleep(1)
 
     bajadas = revisar_conocidos(activos, vigilar, temas, precios)
     registro, est = procesar_web(temas, activos, precios, revisar_estado=True)
+    mercado.BAJADAS.clear()
     cerrados = mercado.revisar(seguidos, VENTAS)
+    avisados += revisar_bajadas(mercado.BAJADAS, precios, temas, activos, vigilar, vistos)
 
     corte = ahora_ms() - 20 * 86400000
     vistos = {k: v for k, v in vistos.items() if v >= corte}
@@ -791,7 +923,7 @@ def ejecutar():
     for nombre, datos in (('precios.json', precios), ('vistos.json', vistos), ('activos.json', activos),
                           ('vigilar.json', vigilar), ('temas.json', temas), ('mercado.json', seguidos), ('ventas.json', VENTAS)):
         guardar(nombre, datos)
-    exportar(activos)
+    exportar(activos, vigilar)
     # lo que viene ahora es extra: si algo falla, se avisa en el registro pero la pasada no se pierde
     for nombre, paso in (('estudio', lambda: aprender_y_estudiar(precios, seguidos, registro, condicion)),
                          ('analizador', lambda: exportar_analizador(precios)),
@@ -802,7 +934,7 @@ def ejecutar():
             import traceback
             traceback.print_exc()
             print(f'aviso: falló el paso «{nombre}»: {ex}', file=sys.stderr)
-    print(f'{len(vistos_items)} anuncios revisados · {len(nuevos)} nuevos de modelos que tratamos · '
+    print(f'{len(vistos_items)} anuncios revisados ({de_milanuncios} de Milanuncios en el radio) · {len(nuevos)} nuevos de modelos que tratamos · '
           f'{avisados} avisos · {bajadas} bajadas de precio · {len(vigilar)} vigilados · '
           f'mercado: {len(seguidos)} seguidos (+{barridos} del barrido), {cerrados} vendidos/retirados en esta pasada, {len(VENTAS)} ventas en memoria · '
           f'{sum(len(v) for v in precios.values())} precios de referencia en {len(precios)} modelos')

@@ -15,10 +15,12 @@ import time
 
 import analisis
 import config
+import milanuncios
 import wallapop
 
 DIA = 86400000
 AJUSTE_VENTA = 1.0          # se recalcula con vuestras ventas reales
+BAJADAS = []                # anuncios seguidos que han bajado de precio en esta pasada
 
 
 def _ahora():
@@ -135,7 +137,7 @@ def revisar(seguidos, ventas):
     for iid, x in lote:
         if ahora - x['rev'] < 3600000:          # ya mirado hace menos de una hora
             continue
-        det = wallapop.detalle(iid)
+        det = (milanuncios.detalle if iid.startswith('ma-') else wallapop.detalle)(iid)
         if det == 'error':
             x['rev'] = ahora
             continue
@@ -145,6 +147,8 @@ def revisar(seguidos, ventas):
         else:
             precio = ((det.get('price') or {}).get('cash') or {}).get('amount')
             if precio:
+                if float(precio) <= x['p'] * 0.95:          # ha bajado un 5 % o más: se vuelve a mirar si ya es chollo
+                    BAJADAS.append(iid)
                 x['p'] = float(precio)
             if wallapop.flag(det.get('sold')):
                 fin = int((det.get('modified_date') or ahora / 1000) * 1000)

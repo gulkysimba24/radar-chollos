@@ -21,11 +21,21 @@ MARGEN_REGATEO = 0.93    # avisar solo si regateando ~7 % (o menos) se llega al 
 MARGEN_VIGILAR = 0.78    # entre 7 % y 28 % por encima del máximo: se vigila por si baja de precio
 
 # Búsquedas en cada revisión (order_by=newest dentro del radio)
+# Búsquedas en cada pasada (40 anuncios por página): unos 1.100 anuncios en total
 BUSQUEDAS = [
-    ('iphone', 3),
-    ('iphone roto', 1), ('iphone pantalla rota', 1), ('iphone para reparar', 1),
-    ('samsung galaxy', 2), ('google pixel', 1), ('xiaomi', 1),
+    ('iphone', 15),
+    ('iphone roto', 3), ('iphone pantalla rota', 2), ('iphone para reparar', 2),
+    ('samsung galaxy', 4), ('google pixel', 2), ('xiaomi', 2),
 ]
+
+# Milanuncios (toda la Comunidad de Madrid; luego se filtra por distancia): (texto, cuántos, categoría)
+MILANUNCIOS = [('iphone', 300, 1270), ('samsung galaxy', 100, 112), ('google pixel', 50, 112), ('xiaomi', 50, 112)]
+
+# iPhone rotos: de momento solo se enseñan si son una ganga de verdad (categoría «chollazo»)
+SOLO_ROTOS_CHOLLAZO = True
+
+# Casi chollos: si regateando hasta un 12 % se llega al máximo, avisa en silencio como «para regatear»
+REGATEO_AVISO = 1.12
 
 # Horas en las que los avisos llegan sin sonido (hora de Madrid)
 SILENCIO = (0, 8)        # de 0:00 a 7:59

@@ -21,16 +21,7 @@
    "notas": ""
   }
  ],
- "movimientos": [
-  {
-   "id": "m1792576202537",
-   "quien": "Gulkyismba24",
-   "tipo": "retirada",
-   "importe": 25,
-   "fecha": "2026-10-21",
-   "nota": ""
-  }
- ],
+ "movimientos": [],
  "meses": {
   "2026-10": {
    "presupuesto": 350

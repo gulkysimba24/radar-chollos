@@ -27,6 +27,8 @@ BUSQUEDAS = [
     ('iphone roto', 3), ('iphone pantalla rota', 2), ('iphone para reparar', 2),
     ('samsung galaxy', 4), ('google pixel', 2), ('xiaomi', 2),
 ]
+# Además, iPhones que el vendedor puso en una categoría equivocada: (texto, páginas, categoría; None = todas)
+BUSQUEDAS_OTRAS = [('iphone', 2, 12485), ('iphone', 4, None)]
 
 # Milanuncios (toda la Comunidad de Madrid; luego se filtra por distancia): (texto, cuántos, categoría)
 MILANUNCIOS = [('iphone', 300, 1270), ('samsung galaxy', 100, 112), ('google pixel', 50, 112), ('xiaomi', 50, 112)]

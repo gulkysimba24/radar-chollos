@@ -19,11 +19,12 @@ def _get(url):
     return int(code or 0), body
 
 
-def buscar(palabras, paginas, radio_km=None, orden='newest', precio_max=None):
-    """Devuelve los anuncios más nuevos de la categoría de móviles dentro del radio."""
+def buscar(palabras, paginas, radio_km=None, orden='newest', precio_max=None, categoria=24200):
+    """Devuelve los anuncios más nuevos dentro del radio (por defecto, de la categoría de móviles;
+    categoria=None busca en todas, para pillar los que el vendedor puso en «Otros»)."""
     lat, lng = config.ORIGEN
     params = {
-        'source': 'search_box', 'category_id': 24200, 'keywords': palabras,
+        'source': 'search_box', 'keywords': palabras, **({'category_id': categoria} if categoria else {}),
         'latitude': lat, 'longitude': lng, 'order_by': orden,
         'distance_in_km': radio_km or config.RADIO_KM,
         'min_sale_price': config.PRECIO_MIN, 'max_sale_price': precio_max or config.PRECIO_MAX_BUSQUEDA,

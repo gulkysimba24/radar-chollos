@@ -344,19 +344,21 @@ dialog .df .btn { flex: 1; }
         <button class="btn main grande" type="submit">🔎 Analizar</button>
       </form>
     </div>
-    <div class="panel" hidden>
+    <details class="panel" id="an-mano" style="border-top:1px solid var(--line)">
+      <summary style="font-size:15px">✍️ Calcular a mano (sin enlace)</summary>
+      <p class="sub" style="margin:8px 0">Elige el modelo y pon lo que sepas. El resultado sale abajo al momento.</p>
       <div class="form" id="an-datos">
-        <label>Modelo<input type="text" id="an-modelo" list="lista-modelos" placeholder="iPhone 13" autocomplete="off"></label>
+        <label>Modelo<select id="an-modelo" style="width:100%;min-height:42px;background:var(--bg)"></select></label>
         <div class="tres">
           <label>Precio (€)<input type="number" id="an-precio" min="0" inputmode="decimal"></label>
           <label>Capacidad<select id="an-cap" style="width:100%;min-height:42px;background:var(--bg)"></select></label>
-          <label>Batería %<input type="number" id="an-bat" min="50" max="100" inputmode="numeric" placeholder="?"></label>
+          <label>Batería %<input type="number" id="an-bat" min="50" max="100" inputmode="numeric" placeholder="no sé"></label>
         </div>
-        <div><span class="hint" style="display:block;margin-bottom:6px">¿Qué tiene roto? (márcalo si te lo dice el vendedor)</span>
+        <div><span class="hint" style="display:block;margin-bottom:6px">¿Tiene algo roto? Déjalo sin marcar si está bien</span>
           <div class="checks" id="an-averias"></div></div>
         <div class="checks"><label><input type="checkbox" id="an-marcas"> Con marcas o rayas</label><label><input type="checkbox" id="an-caja"> Con caja o factura</label></div>
       </div>
-    </div>
+    </details>
     <div id="an-res"></div>
   </section>
 
@@ -920,8 +922,8 @@ $('#f-enlace').addEventListener('submit', async e => {
 
 // ------------------------------------------------------------------ analizador
 let AN = null, anItem = null;
-const AVERIAS_UI = ['pantalla', 'trasera', 'batería', 'cámara', 'puerto de carga', 'altavoz', 'botón'];
-$('#an-averias').innerHTML = AVERIAS_UI.map(a => `<label><input type="checkbox" value="${a}"> ${a}</label>`).join('');
+const AVERIAS_UI = ['pantalla', 'trasera', 'batería (hay que cambiarla)', 'cámara', 'puerto de carga', 'altavoz', 'botón'];
+$('#an-averias').innerHTML = AVERIAS_UI.map(a => `<label><input type="checkbox" value="${a.split(' (')[0]}"> ${a}</label>`).join('');
 const RX = {};
 function rx(p) { return RX[p] || (RX[p] = new RegExp(p, 'gi')); }
 function hay(pat, t) {
@@ -942,14 +944,16 @@ const kmDe = (lat, lng) => { if (lat == null) return null; const R = 6371, r = M
 async function wapi(url) { const r = await fetch(url, { headers: { 'X-DeviceOS': '0' } }); if (!r.ok) throw new Error(r.status === 404 ? 'El anuncio ya no existe (vendido o retirado)' : 'Wallapop respondió ' + r.status); return r.json(); }
 async function buscarId(slug) {
   const num = slug.split('-').pop(), trozos = slug.split('-').slice(0, -1).filter(Boolean);
-  for (const [pal, orden] of [[trozos.join(' '), 'most_relevance'], [trozos.slice(0, 4).join(' '), 'most_relevance'], [trozos.join(' '), 'newest'], [trozos.slice(0, 3).join(' '), 'most_relevance']]) {
+  const intentos = [[trozos.join(' '), 'most_relevance', null], [trozos.join(' '), 'most_relevance', 24200], [trozos.slice(0, 4).join(' '), 'most_relevance', null],
+    [trozos.join(' '), 'newest', null], [trozos.slice(0, 3).join(' '), 'most_relevance', 24200]];
+  for (const [pal, orden, cat] of intentos) {
     if (!pal) continue;
-    let url = 'https://api.wallapop.com/api/v3/search?' + new URLSearchParams({ source: 'search_box', category_id: 24200, keywords: pal.slice(0, 60), latitude: homeLL[0], longitude: homeLL[1], order_by: orden, distance_in_km: 400 });
+    let url = 'https://api.wallapop.com/api/v3/search?' + new URLSearchParams({ source: 'search_box', ...(cat ? { category_id: cat } : {}), keywords: pal.slice(0, 60), latitude: homeLL[0], longitude: homeLL[1], order_by: orden, distance_in_km: 400 });
     for (let pg = 0; pg < 3 && url; pg++) {
       const j = await wapi(url);
       for (const it of j?.data?.section?.payload?.items || []) {
         const fotos = (it.images || []).map(i => i.urls?.small || '').join(' ');
-        if (it.web_slug === slug || (/^\d+$/.test(num) && fotos.includes(`p${num}/`))) return it;
+        if (it.web_slug === slug || (/^\d+$/.test(num) && ((it.web_slug || '').endsWith('-' + num) || fotos.includes(`p${num}/`)))) return it;
       }
       const nx = j?.meta?.next_page; url = nx ? 'https://api.wallapop.com/api/v3/search?next_page=' + encodeURIComponent(nx) : null;
     }
@@ -962,11 +966,19 @@ function modeloDe(texto, attr) {
   const t = ' ' + texto.toLowerCase().replace(/\s+/g, ' ') + ' ';
   return nombres.filter(n => t.includes(' ' + n.toLowerCase() + ' ') || t.includes(' ' + n.toLowerCase())).sort((a, b) => b.length - a.length)[0] || attr || '';
 }
+function opcionesModelo(sel) {
+  if (!AN) return;
+  const orden = n => { const m = n.match(/iPhone (\d+)/); return [/iphone/i.test(n) ? 0 : 1, m ? +m[1] : 0, n]; };
+  const nombres = Object.keys(AN.precios).sort((a, b) => { const x = orden(a), y = orden(b); return x[0] - y[0] || y[1] - x[1] || x[2].localeCompare(y[2], 'es', { numeric: true }); });
+  if (sel && !nombres.includes(sel)) nombres.unshift(sel);
+  $('#an-modelo').innerHTML = '<option value="">Elige el modelo…</option>' + nombres.map(n => `<option ${n === sel ? 'selected' : ''}>${esc(n)}</option>`).join('');
+}
 function opcionesCap(modelo, sel) {
   const caps = Object.keys(AN?.precios?.[modelo]?.caps || {}).filter(c => c !== '*');
   const lista = [...new Set([...caps, ...(sel && sel !== '*' ? [sel] : [])])];
   $('#an-cap').innerHTML = `<option value="*">No sé / cualquiera</option>` + lista.map(c => `<option ${c === sel ? 'selected' : ''}>${esc(c)}</option>`).join('');
 }
+$('#an-datos').addEventListener('input', e => { if (e.isTrusted && anItem && !$('#an-url').value.trim()) anItem = null; }, true);
 $('#f-analizar').addEventListener('submit', async e => {
   e.preventDefault();
   const url = $('#an-url').value.trim();
@@ -995,13 +1007,13 @@ $('#f-analizar').addEventListener('submit', async e => {
       tienda: !!(det.user?.is_top_profile && det.user.is_top_profile.flag), est,
     };
     const modelo = modeloDe(titulo, ta.model?.text);
-    $('#an-modelo').value = modelo;
+    opcionesModelo(modelo);
     $('#an-precio').value = det.price?.cash?.amount ?? it.price?.amount ?? '';
     const cap = ta.storage_capacity?.text || (titulo + ' ' + desc).match(/\b(64|128|256|512) ?gb\b|\b1 ?tb\b/i)?.[0]?.toUpperCase().replace(/(\d)(GB|TB)/, '$1 $2');
     opcionesCap(modelo, cap || '*');
     const bat = batTexto(`${titulo} ${desc}`);
     $('#an-bat').value = bat ?? '';
-    $$('#an-averias input').forEach(c => c.checked = est.averias.includes(c.value) || est.extras.includes(c.value) || (c.value === 'batería' && bat != null && bat < 80));
+    $$('#an-averias input').forEach(c => c.checked = (est.averias.includes(c.value) && !(c.value === 'batería' && bat != null)) || est.extras.includes(c.value));
     $('#an-marcas').checked = est.marcas; $('#an-caja').checked = /\bcaja\b|factura/i.test(desc);
     calcularAnalisis();
   } catch (err) {
@@ -1015,14 +1027,19 @@ $('#f-analizar').addEventListener('submit', async e => {
   }
   finally { btn.disabled = false; }
 });
-['#an-modelo', '#an-precio', '#an-cap', '#an-bat', '#an-marcas', '#an-caja'].forEach(q => $(q).addEventListener('input', () => { if (q === '#an-modelo') opcionesCap($('#an-modelo').value.trim(), $('#an-cap').value); if (q === '#an-bat') { const b = num($('#an-bat').value); const c = $$('#an-averias input').find(x => x.value === 'batería'); if (b != null) c.checked = b < 80; } calcularAnalisis(); }));
+['#an-modelo', '#an-precio', '#an-cap', '#an-bat', '#an-marcas', '#an-caja'].forEach(q => $(q).addEventListener('input', () => {
+  if (q === '#an-modelo') opcionesCap($('#an-modelo').value.trim(), '*');
+  calcularAnalisis();
+}));
+$('#an-mano').addEventListener('toggle', () => { if ($('#an-mano').open && anItem && !$('#an-url').value.trim()) { anItem = null; $('#an-caja').checked = $('#an-marcas').checked = false; $$('#an-averias input').forEach(c => c.checked = false); }
+  if ($('#an-mano').open && !anItem) { opcionesModelo($('#an-modelo').value); if (!$('#an-cap').options.length) opcionesCap($('#an-modelo').value, '*'); } });
 $('#an-averias').addEventListener('change', calcularAnalisis);
 const r5 = x => Math.round(x / 5) * 5;
 function calcularAnalisis() {
   if (!AN) { $('#an-res').innerHTML = '<div class="empty">Aún no hay datos de precios: espera a la próxima pasada del bot.</div>'; return; }
   const modelo = $('#an-modelo').value.trim(), precio = num($('#an-precio').value), bat = num($('#an-bat').value);
   const P = AN.precios[modelo];
-  if (!modelo || precio == null) { $('#an-res').innerHTML = anItem ? '' : ''; return; }
+  if (!modelo || precio == null) { $('#an-res').innerHTML = $('#an-mano').open && !anItem ? '<div class="empty">Elige el modelo y pon el precio para ver el resultado.</div>' : ''; return; }
   if (!P) { $('#an-res').innerHTML = `<div class="empty"><b>No tengo precios del ${esc(modelo)}.</b><br>Hacen falta al menos 6 anuncios del modelo para calcular. Prueba con el nombre exacto (ej.: «iPhone 13 Pro»).</div>`; return; }
   const capSel = $('#an-cap').value, pr = P.caps[capSel] || P.caps['*'];
   const marcados = $$('#an-averias input:checked').map(c => c.value);
@@ -1073,8 +1090,8 @@ function calcularAnalisis() {
       ${anItem.cont.views != null ? `<span class="chip">👀 ${anItem.cont.views}</span><span class="chip">❤️ ${anItem.cont.favorites}</span><span class="chip">💬 <b>${anItem.cont.conversations}</b> chats</span>` : ''}
       ${anItem.publicado ? `<span class="chip">🕒 publicado ${esc(hace(anItem.publicado))}</span>` : ''}
       ${anItem.reservado ? '<span class="chip">⏸️ reservado</span>' : ''}${anItem.tienda ? '<span class="chip">🏪 perfil destacado/tienda</span>' : ''}</div>` : '';
-  $('#an-res').innerHTML = `<article class="card ${categoria}">
-    <div class="top"><span class="tag">${CAT_TXT[categoria]}</span><span class="kind">${familia === 'iphone' ? ICO.apple : ICO.android}${rep ? 'Para reparar' : 'Listo para vender'}</span></div>
+  $('#an-res').innerHTML = `<article class="card ${v[0] === 'no' ? '' : categoria}">
+    <div class="top"><span class="tag">${v[0] === 'no' ? 'No compensa' : CAT_TXT[categoria]}</span><span class="kind">${familia === 'iphone' ? ICO.apple : ICO.android}${rep ? 'Para reparar' : 'Listo para vender'}</span></div>
     <div class="head">${ficha.foto ? `<img class="foto" src="${esc(ficha.foto)}" alt="" referrerpolicy="no-referrer" onerror="this.remove()">` : ''}<div class="txt">
       <span class="model">${esc(modelo)}${ficha.capacidad ? ' · ' + esc(ficha.capacidad) : ''}</span>
       <span class="where">${anItem ? esc(anItem.titulo) : 'Cálculo a mano'}${anItem?.zona ? ` · ${esc(anItem.zona)}${anItem.km != null ? ` · <b>~${anItem.km} km</b>` : ''}` : ''}</span></div></div>

@@ -472,10 +472,10 @@ def id_de_enlace(url):
                             (' '.join(trozos), 'newest'), (' '.join(trozos[:3]), 'most_relevance')):
         if not palabras:
             continue
-        for it in wallapop.buscar(palabras[:60], 3, radio_km=400, orden=orden, precio_max=100000):
-            urls = ' '.join((im.get('urls') or {}).get('small', '') for im in it.get('images') or [])
-            if it.get('web_slug') == slug or (num.isdigit() and f'p{num}/' in urls):
-                return it['id']
+        for cat in (24200, None):
+            for it in wallapop.buscar(palabras[:60], 3, radio_km=400, orden=orden, precio_max=100000, categoria=cat):
+                if it.get('web_slug') == slug or (num.isdigit() and (it.get('web_slug') or '').endswith('-' + num)):
+                    return it['id']
     return None
 
 
@@ -915,8 +915,9 @@ def ejecutar():
     mercado.aprender(cargar('registro.json', {}), lambda m, c: estimar_venta(precios, m, c))
 
     vistos_items, nuevos = {}, []
-    for palabras, paginas in config.BUSQUEDAS:
-        for it in wallapop.buscar(palabras, paginas):
+    busquedas = [(p, n, 24200) for p, n in config.BUSQUEDAS] + list(getattr(config, 'BUSQUEDAS_OTRAS', []))
+    for palabras, paginas, cat in busquedas:
+        for it in wallapop.buscar(palabras, paginas, categoria=cat):
             if it['id'] in vistos_items:
                 continue
             a = preparar(it)

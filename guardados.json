@@ -961,6 +961,56 @@
    "por": "Gulkysimba",
    "ms": 1792602766403,
    "nota": ""
+  },
+  "p618r05n92z5": {
+   "id": "p618r05n92z5",
+   "familia": "iphone",
+   "tipo": "listo",
+   "nivel": null,
+   "modelo": "iPhone 15",
+   "capacidad": "128 GB",
+   "precio": 290,
+   "oferta": 255,
+   "max": 315,
+   "venta": 344,
+   "beneficio": 84,
+   "reparacion": [],
+   "zona": "Leganés",
+   "km": 4,
+   "lat": 40.319266669653516,
+   "lng": -3.7780126197390373,
+   "url": "https://es.wallapop.com/item/iphone-15-128-gb-negro-1311619407",
+   "foto": "https://cdn.wallapop.com/images/10420/lo/wk/__/c10420p1311619407/i6789172778.jpg?pictureSize=W640",
+   "bateria": 87,
+   "resumen": "Sin daños · batería 87 % · Wallapop dice: buen estado",
+   "preguntas": [
+    "¿Por qué lo vendes tan barato? ¿Tienes la factura a tu nombre?",
+    "¿Está pagado del todo y comprado en España?",
+    "¿Funciona el Face ID?",
+    "¿Se ha abierto o reparado alguna vez?",
+    "¿Has quitado tu cuenta de iCloud? ¿Es libre de operador?"
+   ],
+   "regateo": "Ofrece 255 € y cierra en 295 € o menos si puedes. No pases de 315 €; por encima de 340 € pierdes dinero.",
+   "mensaje": "Hola, me interesa el iPhone 15. ¿Sigue disponible? Te ofrezco 255 € y lo recojo en mano cuando te venga bien.",
+   "precio_bueno": 295,
+   "limite": 340,
+   "venta_rango": [
+    324,
+    378
+   ],
+   "fiabilidad": "baja",
+   "fuente_venta": "52 anuncios a la venta, aún sin ventas reales",
+   "factor_estado": 1,
+   "categoria": "chollazo",
+   "riesgo": "medio",
+   "pct_mercado": 76,
+   "dias_venta": 1,
+   "avisado_ms": null,
+   "estado": "activo",
+   "wid": "p618r05n92z5",
+   "por": "Gulkysimba",
+   "ms": 1792606604092,
+   "nota": ""
   }
  }
 }

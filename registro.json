@@ -29,6 +29,14 @@
    "importe": 150,
    "fecha": "2026-10-21",
    "nota": "Dinero inicio"
+  },
+  {
+   "id": "m1792609818474",
+   "quien": "Striker",
+   "tipo": "aporte",
+   "importe": 100,
+   "fecha": "2026-10-21",
+   "nota": ""
   }
  ],
  "meses": {

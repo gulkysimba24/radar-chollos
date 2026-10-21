@@ -19,6 +19,26 @@
    "fecha_venta": "2026-10-21",
    "url": "https://es.wallapop.com/item/iphone-14-plus-1315234840",
    "notas": ""
+  },
+  {
+   "id": "c1792622197947",
+   "quien": "Gulkysimba",
+   "creado_ms": 1792622197947,
+   "wid": null,
+   "venta_estimada": null,
+   "modelo": "iPhone 13 mini",
+   "capacidad": "128 GB",
+   "bateria": 81,
+   "estado": "listo",
+   "precio_compra": 125,
+   "fecha_compra": "2026-10-22",
+   "reparaciones": [],
+   "gasolina": 10,
+   "otros": null,
+   "precio_venta": null,
+   "fecha_venta": "",
+   "url": "",
+   "notas": ""
   }
  ],
  "movimientos": [

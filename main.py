@@ -240,25 +240,30 @@ def texto_aviso(a, cabecera=None):
         extra.append('❓ Dice que está roto pero no qué: se calcula como si fuera la pantalla')
     if CAJA and d.get('oferta') and d['oferta'] > CAJA['caja']:
         extra.append(f"💸 Os faltan ~{d['oferta'] - CAJA['caja']:.0f} € de caja (tenéis {CAJA['caja']:.0f} €): habría que poner dinero")
-    lineas += [cat, titulo, tipo] + ([riesgo] if riesgo else []) + extra + [
-        '',
-        f"💶 Piden <b>{a['precio']:.0f} €</b> → ofrece <b>{d['oferta']} €</b> · máximo <b>{d['max_pagar']} €</b>",
-        f"📈 Se vende por ~{d['venta']} € · ganas <b>{'+' if d['beneficio_oferta'] > 0 else ''}{d['beneficio_oferta']} €</b> con tu oferta"
-        f" ({'+' if ben > 0 else ''}{ben} € pagando lo que piden)",
-        ya,
-    ] + tramos_txt(d) + ([f"⏱️ Este modelo se suele vender en <b>~{str(a['dias_venta']).replace('.', ',')} días</b> ({a['dias_venta_n']} ventas vistas)"]
-         if a.get('dias_venta') is not None else []) + [
-        f"📍 {e(a.get('zona') or 'Madrid')} · <b>~{a['km']} km</b> de {config.ORIGEN_NOMBRE}" if a.get('km') is not None
-        else f"📍 {e(a.get('zona') or 'Madrid')}",
-        f"🔎 {e(a['resumen'])}",
-    ]
-    cont = a.get('contadores') or {}
-    actividad = f"🕒 Publicado {hace(a.get('publicado_ms'))}" if a.get('publicado_ms') else ''
-    if cont:
-        actividad += f"{' · ' if actividad else ''}👀 {cont.get('views', 0)} visitas · ❤️ {cont.get('favorites', 0)} · 💬 {cont.get('conversations', 0)} chats"
-    lineas += [actividad, '', '<b>Pregunta antes de ir:</b>']
-    lineas += [f'• {e(p)}' for p in a['preguntas']]
-    lineas += ['', f"<b>Regateo:</b> {e(a['regateo'])}", '', '<b>Mensaje para copiar:</b>', f"<code>{e(a['mensaje'])}</code>"]
+    # aviso corto: lo justo para decidir de un vistazo; el resto (preguntas, regateo, mensaje) en la web
+    corto = {'alto': f"⚠️ Muy barato ({d.get('pct_mercado')} %): pide factura e IMEI, nunca pagues antes",
+             'medio': f"⚠️ {d.get('pct_mercado')} % del precio normal: pide factura e IMEI"}.get(d.get('riesgo'))
+    if d.get('categoria') == 'trampa':
+        corto = '⚠️ Pide factura e IMEI. Nunca pagues por adelantado'
+    pegas = list(d.get('defectos') or [])
+    if d['tipo'] != 'listo':
+        pegas.insert(0, ', '.join(d['reparacion']))
+    lugar = e(a.get('zona') or 'Madrid') + (f" · {a['km']} km" if a.get('km') is not None else '')
+    if a.get('publicado_ms'):
+        lugar += f" · {hace(a['publicado_ms'])}"
+    if a.get('bateria'):
+        lugar += f" · 🔋{a['bateria']} %"
+    lineas += [f"{cat}", f"{titulo} · <b>{a['precio']:.0f} €</b>",
+               f"💶 Ofrece <b>{d['oferta']} €</b> (máx {d['max_pagar']}) · vende ~{d['venta']} € · ganas <b>{'+' if d['beneficio_oferta'] > 0 else ''}{d['beneficio_oferta']} €</b>"]
+    if pegas:
+        lineas.append('🔧 ' + e(', '.join(pegas)))
+    if corto:
+        lineas.append(corto)
+    if a.get('modelo_dudoso'):
+        lineas.append(f"⚠️ {e(a['modelo_dudoso'])}")
+    if a.get('origen') == 'milanuncios':
+        lugar = '📰 ' + lugar
+    lineas.append(f"📍 {lugar}")
     return '\n'.join(lineas)
 
 
@@ -378,10 +383,21 @@ DESCARTADOS = set()   # anuncios que habéis marcado «No me interesa» en la we
 CAJA = None           # dinero disponible (de la web); None si no habéis apuntado aportes
 
 
+def no_es_movil(a, d=None):
+    """Fundas, carcasas, chasis o precios imposibles: no es un móvil para comprar."""
+    d = d or a.get('eval') or {}
+    p, venta = a.get('precio') or 0, d.get('venta') or 0
+    if p < 60 or analisis.es_accesorio(a.get('titulo') or ''):
+        return True
+    return d.get('tipo') == 'listo' and venta and p < venta * 0.40
+
+
 def interesa(a, d=None):
     """False si es algo que ahora no queréis ver: descartado, o iPhone roto que no sea una ganga."""
     d = d or a.get('eval') or {}
     if a['id'] in DESCARTADOS:
+        return False
+    if no_es_movil(a, d):
         return False
     if CAJA and d.get('oferta') and d['oferta'] > CAJA['disponible']:
         return False                      # no os llega ni contando el extra que podéis poner

@@ -129,7 +129,7 @@ def _mensaje_discord(texto, botones=None, foto=None):
         md += '\n\n' + enlaces
     embed = {'description': md[:4000], 'color': _color(texto)}
     if foto:
-        embed['image'] = {'url': foto}
+        embed['thumbnail'] = {'url': foto}     # foto pequeña al lado: el aviso ocupa menos
     return {'embeds': [embed], 'allowed_mentions': {'parse': []}}
 
 
@@ -192,9 +192,12 @@ def enviar(texto, tema=None, botones=None, silencioso=False, foto=None, clave=No
         return 0
     tid = None
     if activo():
-        r = _api('sendMessage', chat_id=os.environ['TELEGRAM_CHAT_ID'], text=texto, parse_mode='HTML',
-                 message_thread_id=tema, disable_notification='true' if silencioso else None,
-                 reply_markup={'inline_keyboard': botones} if botones else None, **_vista(foto))
+        comun = dict(chat_id=os.environ['TELEGRAM_CHAT_ID'], parse_mode='HTML', message_thread_id=tema,
+                     disable_notification='true' if silencioso else None,
+                     reply_markup={'inline_keyboard': botones} if botones else None)
+        r = _api('sendPhoto', photo=foto, caption=texto, **comun) if foto and len(texto) <= 1024 else {'ok': False}
+        if not r.get('ok'):
+            r = _api('sendMessage', text=texto, **comun, **_vista(foto))
         if r.get('ok'):
             tid = r['result']['message_id']
         else:
@@ -211,8 +214,11 @@ def editar(message_id, texto, botones=None, foto=None):
     if not message_id:
         return
     if activo() and not str(message_id).startswith('d'):
-        _api('editMessageText', chat_id=os.environ['TELEGRAM_CHAT_ID'], message_id=message_id, text=texto,
-             parse_mode='HTML', reply_markup={'inline_keyboard': botones} if botones else None, **_vista(foto))
+        r = _api('editMessageText', chat_id=os.environ['TELEGRAM_CHAT_ID'], message_id=message_id, text=texto,
+                 parse_mode='HTML', reply_markup={'inline_keyboard': botones} if botones else None, **_vista(foto))
+        if not r.get('ok') and 'no text' in str(r.get('description', '')).lower():      # el aviso es una foto
+            _api('editMessageCaption', chat_id=os.environ['TELEGRAM_CHAT_ID'], message_id=message_id, caption=texto[:1024],
+                 parse_mode='HTML', reply_markup={'inline_keyboard': botones} if botones else None)
     if discord_activo():
         par = _estado.get('_discord', {}).get('msgs', {}).get(str(message_id))
         if par:

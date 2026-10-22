@@ -826,7 +826,7 @@ function base() {
   return data.chollos.filter(c => (S.fam === 'todos' || c.familia === S.fam) && (S.tipo === 'todos' || c.tipo === S.tipo)
     && (c.km == null || c.km <= S.km) && c.precio >= (S.pmin || 0) && (S.pmax >= 1000 || c.precio <= S.pmax)
     && (!c.publicado_ms || c.publicado_ms >= Date.now() - (S.edad || 72) * 3600000)
-    && !SOLO_PIEZAS.test(c.titulo || '')
+    && !SOLO_PIEZAS.test(c.titulo || '') && c.precio >= 60 && !(c.tipo === 'listo' && c.venta && c.precio < c.venta * 0.4)
     && (S.vend || c.estado !== 'vendido') && (S.verdesc || !descartado(c.id)));
 }
 async function descartar(id, deshacer) {

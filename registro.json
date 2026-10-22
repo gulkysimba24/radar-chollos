@@ -74,5 +74,16 @@
  },
  "ajustes": {
   "extra": 50
- }
+ },
+ "gastos": [
+  {
+   "id": "g1792640790541",
+   "quien": "Gulky",
+   "importe": 15,
+   "concepto": "Comida+Gasolina",
+   "categoria": "Gasolina y transporte",
+   "fecha": "2026-10-22",
+   "pagado": "caja"
+  }
+ ]
 }

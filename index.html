@@ -821,12 +821,12 @@ function maps(c) { return 'https://www.google.com/maps/dir/?api=1&origin=' + enc
 let descartados = { items: {} };
 const DESC_LOCAL = new Set(leer('radar-descartados', []));
 const descartado = id => !!(descartados.items || {})[id] || DESC_LOCAL.has(id);
-const PIEZAS = /chasis|carcasa|despiece|para piezas|solo piezas|placa base|\bplaca\b|pantalla (sola|original|repuesto)|^(tapa|marco|bandeja|flex|lente|cristal|repuesto)\b/i;
+const SOLO_PIEZAS = /chasis|carcasa|despiece|para piezas|solo piezas|placa base|\bplaca\b|pantalla (sola|original|repuesto)|^(tapa|marco|bandeja|flex|lente|cristal|repuesto)\b/i;
 function base() {
   return data.chollos.filter(c => (S.fam === 'todos' || c.familia === S.fam) && (S.tipo === 'todos' || c.tipo === S.tipo)
     && (c.km == null || c.km <= S.km) && c.precio >= (S.pmin || 0) && (S.pmax >= 1000 || c.precio <= S.pmax)
     && (!c.publicado_ms || c.publicado_ms >= Date.now() - (S.edad || 72) * 3600000)
-    && !PIEZAS.test(c.titulo || '')
+    && !SOLO_PIEZAS.test(c.titulo || '')
     && (S.vend || c.estado !== 'vendido') && (S.verdesc || !descartado(c.id)));
 }
 async function descartar(id, deshacer) {

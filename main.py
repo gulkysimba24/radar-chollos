@@ -817,10 +817,10 @@ def revisar_bajadas(ids, precios, temas, activos, vigilar, vistos):
 
 
 def duplicado(a, activos):
-    """El mismo móvil anunciado en Wallapop y en Milanuncios (mismo modelo, precio y pueblo en 3 días)."""
+    """El mismo móvil ya avisado: en la otra web, o vuelto a subir con otro anuncio (mismo modelo, precio y pueblo en 3 días)."""
     corte = ahora_ms() - 3 * 86400000
     for b in activos.values():
-        if (b.get('origen', 'wallapop') != a.get('origen', 'wallapop') and b['modelo'] == a['modelo']
+        if (b['id'] != a['id'] and b['modelo'] == a['modelo'] and b.get('capacidad') == a.get('capacidad')
                 and abs(b['precio'] - a['precio']) <= 5 and (b.get('zona') or '').lower() == (a.get('zona') or '').lower()
                 and b.get('avisado_ms', 0) >= corte):
             return True
@@ -1046,8 +1046,13 @@ def ejecutar():
         if duplicado(a, activos):
             vistos[a['id']] = ahora_ms()
             continue
+        if a['id'] in activos:
+            continue
         if completar(a) and avisar(a, temas, activos):
             avisados += 1
+        vistos[a['id']] = ahora_ms()
+        for nombre, datos in (('vistos.json', vistos), ('activos.json', activos), ('temas.json', temas)):
+            guardar(nombre, datos)
         time.sleep(1)
 
     bajadas = revisar_conocidos(activos, vigilar, temas, precios)

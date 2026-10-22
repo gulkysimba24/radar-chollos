@@ -103,12 +103,26 @@ _AVERIAS = {
 }
 _AVERIAS = {k: re.compile(v, re.I) for k, v in _AVERIAS.items()}
 _EXTRAS = {
-    'cámara': r'c[aá]mara.{0,30}(rota|no funciona|falla|no enfoca|borros|vibra|mancha)|menos (la )?c[aá]mara|lente.{0,10}rot|teleobjetivo|gran angular no',
+    'cámara': r'c[aá]mara.{0,30}(rota|no funciona|falla|no enfoca|borros|vibra|mancha)|menos (la )?c[aá]mara|lente.{0,10}rot|(falla|fallan|no (va|funciona)|roto|rota|borros[oa]|mancha|vibra)[^.\n]{0,15}(gran angular|angular|teleobjetivo|zoom|lente|c[aá]mara)|(gran angular|angular|teleobjetivo|zoom)[^.\n]{0,20}(no|falla|mal|borros|vibra|mancha|rot)',
     'puerto de carga': r'no carga|carga mal|puerto de carga|conector de carga|carga solo (inal|por im)',
     'altavoz': r'altavoz.{0,20}(no|mal|roto|bajo)|suena (poco|bajo|mal)|no se oye',
     'botón': r'bot[oó]n.{0,20}(no|roto|hundido)',
 }
 _EXTRAS = {k: re.compile(v, re.I) for k, v in _EXTRAS.items()}
+# defectos con los que se puede vender igual, pero más barato (factor sobre el precio de venta)
+_DEFECTOS = {
+    'Face ID no funciona': (r'face ?id.{0,25}(no|falla|desactiv|mal|roto)|sin face ?id|no (tiene|va|funciona) (el )?face ?id', 0.68),
+    'Touch ID no funciona': (r'touch ?id.{0,20}(no|falla|roto)|sin touch ?id', 0.85),
+    'pantalla o pieza no original': (r'pantalla (no original|gen[eé]rica|compatible|de (otra|segunda) marca)|pieza (desconocida|no original)|no es (la )?original|cambiad[ao] (la )?pantalla', 0.85),
+    'sin True Tone': (r'sin true ?tone|true ?tone.{0,15}(no|desactiv)', 0.93),
+    'manchas, líneas o píxeles en pantalla': (r'(mancha|l[ií]nea|p[ií]xel|quemad|sombra|punto)[^.\n]{0,20}(pantalla|display)|pantalla[^.\n]{0,20}(mancha|l[ií]nea|p[ií]xel|quemad|sombra|parpade)|ghost ?touch|t[aá]ctil.{0,15}(falla|mal|no)', 0.80),
+    'no vibra': (r'no vibra|vibraci[oó]n.{0,15}(no|falla)', 0.94),
+    'micrófono o auricular': (r'(micro|micr[oó]fono|auricular).{0,20}(no|falla|mal)|no (me )?(oyen|escuchan)', 0.88),
+    'wifi, bluetooth o cobertura': (r'(wifi|wi-fi|bluetooth|cobertura|se[ñn]al|sim).{0,20}(no|falla|mal)|sin cobertura|no coge (la )?(sim|se[ñn]al)', 0.75),
+    'sensor de proximidad': (r'(sensor|proximidad).{0,20}(no|falla|mal)', 0.90),
+    'golpes o muchos arañazos': (r'(much[oa]s|bastantes|varios|fuertes?) (ara[ñn]az|rayas|golpes|marcas)|muy (rayad|golpead|usad|marcad)|golpe (en|fuerte)|abollad|esquinas? (golpead|tocad)|doblad', 0.88),
+}
+_DEFECTOS = {k: (re.compile(v, re.I), f) for k, (v, f) in _DEFECTOS.items()}
 _ROTO_GENERICO = re.compile(r'\brot[oa]s?\b|grieta|rajad|golpe fuerte', re.I)
 _MARCAS = re.compile(r'rayas?|rayad|rasgu[ñn]|golpes?|marcas de uso|desconchad|ara[ñn]az|rozad|desgast|piquete|picotaz|muesca|desportill', re.I)
 _DEJO = re.compile(r'(?:te\s+lo\s+dejo|lo\s+dejo|se\s+lo\s+dejo|lo\s+vendo|te\s+lo\s+vendo|precio\s+final)\s+(?:en|a|por)\s+(\d{2,4})|'
@@ -148,6 +162,8 @@ def estado(titulo, descripcion):
         dicho = int(m.group(1) or m.group(2))
         break
     return {'grave': grave, 'averias': averias, 'extras': extras, 'sospecha': sospecha, 'precio_dicho': dicho,
+            'defectos': [k for k, (rx, f) in _DEFECTOS.items() if _hay(rx, texto)],
+            'poca_info': len((descripcion or '').strip()) < 40,
             'marcas': _hay(_MARCAS, texto), 'roto_sin_precisar': roto, 'supuesto': supuesto,
             'reacondicionado': bool(re.search(r'reacondicionad', texto, re.I))}
 
@@ -235,10 +251,15 @@ def evaluar(anuncio, ref):
             return None, None
     else:
         coste, nivel, detalle = 0, None, []
-        # los demasiado baratos ya no se quitan: salen marcados como posible trampa
+        # funcionando y a menos del 40 % de lo normal: es una funda, una caja, piezas o una estafa
+        if precio < ref * 0.40 or (fam == 'iphone' and precio < 80):
+            return None, None
     # precio de venta: el real de las ventas vistas si hay bastantes, si no la mediana de anuncios con descuento;
     # y corregido con lo que vosotros vendéis de verdad (registro de la web)
     venta = (anuncio.get('venta_real') or ref * config.VENTA_FACTOR) * getattr(config, 'AJUSTE_VENTA', 1.0)
+    defectos = est.get('defectos') or []
+    for k in defectos:
+        venta *= _DEFECTOS[k][1]                  # se vende igual, pero más barato
     fijo = config.COSTE_FIJO[tipo]
     objetivo = config.BENEFICIO_MIN[(fam, tipo)]
     maxp = venta - coste - fijo - objetivo
@@ -255,17 +276,19 @@ def evaluar(anuncio, ref):
     ratio_mercado = anuncio.get('precio_anuncio', precio) / ref   # «te lo dejo en…» es regateo, no sospecha
     if est.get('sospecha') or (not reparar and ratio_mercado < 0.70):
         riesgo = 'alto'
-    elif (not reparar and ratio_mercado < 0.80) or (reparar and ratio_mercado < 0.30):
+    elif (not reparar and ratio_mercado < 0.80) or est.get('poca_info') or (reparar and ratio_mercado < 0.30):
         riesgo = 'medio'
     else:
         riesgo = 'bajo'
     ben_oferta = venta - oferta - coste - fijo
     nivel_chollo = categoria(ben_oferta, objetivo, riesgo)
+    if nivel_chollo == 'chollazo' and (defectos or est.get('poca_info')):
+        nivel_chollo = 'bueno'                    # con pegas o sin explicar el estado, nunca «chollazo» a ciegas
     return veredicto, {
         'riesgo': riesgo, 'pct_mercado': round(ratio_mercado * 100), 'categoria': nivel_chollo,
         'motivo_trampa': (est.get('sospecha') or f'está al {round(ratio_mercado * 100)} % de su precio normal') if riesgo == 'alto' else None,
         'fuente_venta': anuncio.get('fuente_venta'),
-        'tipo': tipo, 'nivel': nivel, 'reparacion': detalle, 'coste_reparacion': round(coste),
+        'defectos': defectos, 'tipo': tipo, 'nivel': nivel, 'reparacion': detalle, 'coste_reparacion': round(coste),
         'ref_mercado': round(ref), 'venta': round(venta), 'max_pagar': _r5(maxp) if maxp >= 10 else round(maxp),
         'oferta': oferta,
         'beneficio_precio_pedido': round(venta - precio - coste - fijo),
@@ -298,6 +321,10 @@ def textos(a):
     partes = []
     if d['tipo'] == 'listo':
         partes.append('Sin daños según el anuncio' + (', con marcas de uso' if est['marcas'] else ''))
+    if d.get('defectos'):
+        partes.append('⚠️ ' + ', '.join(d['defectos']) + ' (ya descontado del precio de venta)')
+    if est.get('poca_info'):
+        partes.append('⚠️ Casi no explica el estado: pregunta y mira bien las fotos')
     else:
         nombres = {'pantalla': 'pantalla rota', 'trasera': 'trasera rota', 'batería': 'batería gastada'}
         partes.append(', '.join([nombres[x] for x in est['averias']] + [f'falla {x}' for x in est['extras']]).capitalize())

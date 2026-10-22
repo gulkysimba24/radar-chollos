@@ -19,7 +19,7 @@ def _get(url):
     return int(code or 0), body
 
 
-def buscar(palabras, paginas, radio_km=None, orden='newest', precio_max=None, categoria=24200):
+def buscar(palabras, paginas, radio_km=None, orden='newest', precio_max=None, categoria=24200, precio_min=None):
     """Devuelve los anuncios más nuevos dentro del radio (por defecto, de la categoría de móviles;
     categoria=None busca en todas, para pillar los que el vendedor puso en «Otros»)."""
     lat, lng = config.ORIGEN
@@ -27,7 +27,7 @@ def buscar(palabras, paginas, radio_km=None, orden='newest', precio_max=None, ca
         'source': 'search_box', 'keywords': palabras, **({'category_id': categoria} if categoria else {}),
         'latitude': lat, 'longitude': lng, 'order_by': orden,
         'distance_in_km': radio_km or config.RADIO_KM,
-        'min_sale_price': config.PRECIO_MIN, 'max_sale_price': precio_max or config.PRECIO_MAX_BUSQUEDA,
+        'min_sale_price': precio_min or config.PRECIO_MIN, 'max_sale_price': precio_max or config.PRECIO_MAX_BUSQUEDA,
     }
     url = f'{API}/search?' + urllib.parse.urlencode(params)
     items = []

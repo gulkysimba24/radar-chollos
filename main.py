@@ -65,14 +65,41 @@ def detalle(item_id):
     return (milanuncios.detalle if str(item_id).startswith('ma-') else wallapop.detalle)(item_id)
 
 
+PRECIOS = {}         # precios de referencia (se cargan en ejecutar)
 VENTAS = []          # ventas vistas por la memoria del mercado (se cargan en ejecutar)
+
+
+CAP_F = {'64 GB': 0.9, '128 GB': 1.0, '256 GB': 1.12, '512 GB': 1.25, '1 TB': 1.38}   # se recalcula con los anuncios
+
+
+def aprender_capacidades(precios):
+    """Cuánto más vale cada capacidad que la de 128 GB, mirando los modelos con anuncios de ambas."""
+    for cap in ('64 GB', '256 GB', '512 GB', '1 TB'):
+        ratios = []
+        for lista in precios.values():
+            a = [x[1] for x in lista if x[3] == '128 GB']
+            b = [x[1] for x in lista if x[3] == cap]
+            if len(a) >= 6 and len(b) >= 6:
+                ratios.append(statistics.median(b) / statistics.median(a))
+        if len(ratios) >= 3:
+            CAP_F[cap] = round(max(0.75, min(1.6, statistics.median(ratios))), 3)
+    # más capacidad nunca vale menos (con pocos datos a veces sale al revés)
+    CAP_F['512 GB'] = max(CAP_F['512 GB'], CAP_F['256 GB'] * 1.06)
+    CAP_F['1 TB'] = max(CAP_F['1 TB'], CAP_F['512 GB'] * 1.06)
+    CAP_F['64 GB'] = min(CAP_F['64 GB'], 0.97)
+
+
+def _mezcla(lista, cap):
+    """Precios de todas las capacidades llevados a la capacidad pedida (para modelos con pocos anuncios de esa)."""
+    destino = CAP_F.get(cap, 1.0) if cap else 1.0
+    return sorted(x[1] / CAP_F.get(x[3], 1.0) * destino for x in lista)
 
 
 def pedidos(precios, nombre, cap):
     """Cuartiles de lo que piden los anuncios sin daños (plan B mientras no hay ventas reales)."""
     lista = precios.get(nombre, [])
     misma = sorted(x[1] for x in lista if cap and x[3] == cap)
-    todos = sorted(x[1] for x in lista)
+    todos = _mezcla(lista, cap)
     ps = misma if len(misma) >= 6 else todos if len(todos) >= 4 else None
     if not ps:
         return None
@@ -145,7 +172,7 @@ def referencia(precios, nombre, cap):
         m = analisis.mediana(misma, 6)
         if m:
             return m
-    return analisis.mediana([x[1] for x in lista], 4)
+    return analisis.mediana(_mezcla(lista, cap), 4)
 
 
 # ------------------------------------------------------------------ mensajes
@@ -205,6 +232,10 @@ def texto_aviso(a, cabecera=None):
         extra.append('🏪 Perfil destacado: puede ser un revendedor, pregunta si da factura')
     if a['est'].get('reacondicionado'):
         extra.append('♻️ Dice «reacondicionado»: pregunta dónde se compró y si conserva la garantía')
+    if a.get('modelo_dudoso'):
+        extra.append(f"⚠️ Ojo: {e(a['modelo_dudoso'])}. Se calcula con el más barato: pregunta cuál es")
+    if a['est'].get('precio_dicho'):
+        extra.append(f"💬 En el anuncio dice que lo deja en <b>{a['est']['precio_dicho']} €</b>")
     if a['est'].get('supuesto'):
         extra.append('❓ Dice que está roto pero no qué: se calcula como si fuera la pantalla')
     if CAJA and d.get('oferta') and d['oferta'] > CAJA['caja']:
@@ -222,9 +253,9 @@ def texto_aviso(a, cabecera=None):
         f"🔎 {e(a['resumen'])}",
     ]
     cont = a.get('contadores') or {}
-    actividad = f"🕒 Publicado {hace(a.get('publicado_ms'))}" if a.get('publicado_ms') else '🕒'
+    actividad = f"🕒 Publicado {hace(a.get('publicado_ms'))}" if a.get('publicado_ms') else ''
     if cont:
-        actividad += f" · 👀 {cont.get('views', 0)} visitas · ❤️ {cont.get('favorites', 0)} · 💬 {cont.get('conversations', 0)} chats"
+        actividad += f"{' · ' if actividad else ''}👀 {cont.get('views', 0)} visitas · ❤️ {cont.get('favorites', 0)} · 💬 {cont.get('conversations', 0)} chats"
     lineas += [actividad, '', '<b>Pregunta antes de ir:</b>']
     lineas += [f'• {e(p)}' for p in a['preguntas']]
     lineas += ['', f"<b>Regateo:</b> {e(a['regateo'])}", '', '<b>Mensaje para copiar:</b>', f"<code>{e(a['mensaje'])}</code>"]
@@ -255,6 +286,16 @@ def silencio():
 
 # ------------------------------------------------------------------ revisión
 def preparar(item):
+    a = _preparar(item)
+    if a:
+        dicho = a['est'].get('precio_dicho')
+        if dicho and a['precio'] * 0.5 <= dicho < a['precio']:
+            a['precio_anuncio'] = a['precio_inicial'] = a['precio']
+            a['precio'] = float(dicho)                                     # se calcula con lo que dice que lo deja
+    return a
+
+
+def _preparar(item):
     """Datos básicos de un anuncio de la búsqueda, o None si no es un móvil que tratemos."""
     titulo = item.get('title') or ''
     if analisis.es_accesorio(titulo):
@@ -295,6 +336,22 @@ def completar(a):
         a['contadores'] = det.get('counters') or {}
         if cond == 'has_given_it_all' and a['eval']['tipo'] == 'listo':
             return False               # el propio vendedor dice que está muy gastado
+        # El título y la ficha no dicen el mismo modelo (p. ej. título «14 PRO», ficha «iPhone 14»):
+        # se calcula con el más barato de los dos, para no pagar de más, y se avisa para preguntarlo
+        m_ficha = analisis.modelo(((ta.get('model') or {}).get('text') or ''))
+        if m_ficha and m_ficha[1] != a['modelo'] and PRECIOS:
+            ref_t = referencia(PRECIOS, a['modelo'], a.get('capacidad'))
+            ref_f = referencia(PRECIOS, m_ficha[1], a.get('capacidad'))
+            a['modelo_dudoso'] = f"el título dice {a['modelo']} pero la ficha de Wallapop dice {m_ficha[1]}"
+            if ref_f and (not ref_t or ref_f < ref_t):
+                a['modelo'], a['gama'] = m_ficha[1], m_ficha[2]
+                poner_venta(a, PRECIOS)
+                v, d = evaluar(a, ref_f)
+                if v is None:
+                    return False
+                if v == 'vigilar' and d['categoria'] != 'trampa':
+                    d['categoria'] = 'regatear'
+                a['eval'] = d
     return True
 
 
@@ -338,7 +395,7 @@ def avisar(a, temas, activos, cabecera=None):
     a['resumen'], a['preguntas'], a['regateo'], a['mensaje'] = analisis.textos(a)
     a['avisado_ms'] = ahora_ms()
     callado = silencio() or a['eval'].get('categoria') == 'regatear'
-    if a.get('publicado_ms') and a['publicado_ms'] < ahora_ms() - 48 * 3600000 and not cabecera:
+    if a.get('publicado_ms') and a['publicado_ms'] < ahora_ms() - 5 * 86400000 and not cabecera:
         # anuncio de hace días que el bot no había visto (búsqueda nueva o Milanuncios): al mapa, sin aviso
         a['msg_id'] = None
         activos[a['id']] = {k: v for k, v in a.items() if k != 'est'} | {'est': a['est']}
@@ -688,8 +745,9 @@ def resumen_diario(activos, seguidos_ventas, registro, est, temas):
     if caja:
         ob = finanzas.objetivo(registro, hoy.strftime('%Y-%m'))
         mes = hoy.strftime('%Y-%m')
-        hecho = sum(finanzas._n(c['precio_venta']) - finanzas.coste(c) for c in registro.get('compras', [])
-                    if finanzas.vendida(c) and (c.get('fecha_venta') or '').startswith(mes))
+        hecho = (sum(finanzas._n(c['precio_venta']) - finanzas.coste(c) for c in registro.get('compras', [])
+                     if finanzas.vendida(c) and (c.get('fecha_venta') or '').startswith(mes))
+                 - sum(finanzas._n(g.get('importe')) for g in registro.get('gastos', []) if (g.get('fecha') or '').startswith(mes)))
         l += [f"🏦 Caja: <b>{caja['caja']:.0f} €</b> · dinero total {caja['total']:.0f} € · "
               f"objetivo del mes <b>{hecho:.0f} / {ob['realista']} €</b> ({min(100, round(hecho / max(ob['realista'], 1) * 100))} %)"]
     ventas_hoy = [v for v in seguidos_ventas if v['fin'] >= inicio_dia and v['como'] != 'no']
@@ -776,7 +834,12 @@ def barrer(seguidos, precios, vistos_items, vistos, activos, vigilar):
     lista = config.BARRIDO
     nuevos, añadidos = [], 0
     for k in range(config.BARRIDO_POR_VEZ):
-        for it in wallapop.buscar(lista[(est['i'] + k) % len(lista)], config.BARRIDO_PAGINAS):
+        kw = lista[(est['i'] + k) % len(lista)]
+        # tres órdenes distintos: los más nuevos, los más cercanos (aunque tengan semanas)
+        # y los más baratos (por encima de 120 € para saltarse fundas y piezas)
+        tandas = (wallapop.buscar(kw, config.BARRIDO_PAGINAS) + wallapop.buscar(kw, 5, orden='closest')
+                  + wallapop.buscar(kw, 3, orden='price_low_to_high', precio_min=120))
+        for it in tandas:
             if it['id'] in vistos_items:
                 continue
             vistos_items[it['id']] = True
@@ -789,9 +852,8 @@ def barrer(seguidos, precios, vistos_items, vistos, activos, vigilar):
             e = a['est']
             if not (e['grave'] or e['averias'] or e['extras'] or e['roto_sin_precisar']) and not a['tienda']:
                 anotar_precio(precios, a['modelo'], a['id'], a['precio'], a['capacidad'])
-            reciente = (a.get('publicado_ms') or 0) >= ahora_ms() - 86400000
-            if reciente and a['id'] not in vistos and a['id'] not in activos and a['id'] not in vigilar:
-                nuevos.append(a)
+            if a['id'] not in vistos and a['id'] not in activos and a['id'] not in vigilar:
+                nuevos.append(a)           # se le había escapado: se analiza aunque tenga días
     est['i'] = (est['i'] + config.BARRIDO_POR_VEZ) % len(lista)
     guardar('barrido.json', est)
     return nuevos, añadidos
@@ -908,6 +970,9 @@ def ejecutar():
     seguidos = cargar('mercado.json', {})
     VENTAS = cargar('ventas.json', [])
     condicion = mercado.aprender_condicion(VENTAS)
+    aprender_capacidades(precios)
+    global PRECIOS
+    PRECIOS = precios
     DESCARTADOS.update(cargar('descartados.json', {}).get('items', {}))
     global CAJA
     CAJA = finanzas.resumen(cargar('registro.json', {}))

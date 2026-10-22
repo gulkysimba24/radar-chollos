@@ -122,7 +122,7 @@ BARRIDO = ['iphone 11', 'iphone 11 pro', 'iphone 12', 'iphone 12 mini', 'iphone 
            'iphone 13 pro', 'iphone 14', 'iphone 14 plus', 'iphone 14 pro', 'iphone 15', 'iphone 15 plus', 'iphone 15 pro',
            'iphone 16', 'iphone 16 plus', 'iphone 16 pro', 'iphone 17', 'iphone 17 pro', 'iphone se', 'iphone xr', 'iphone xs']
 BARRIDO_POR_VEZ = 2
-BARRIDO_PAGINAS = 5
+BARRIDO_PAGINAS = 8
 
 # Lo que aprende de vuestras ventas reales (registro de la web)
 APRENDER_MIN_VENTAS = 3         # ventas vuestras necesarias para ajustar el precio de venta

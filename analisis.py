@@ -110,7 +110,9 @@ _EXTRAS = {
 }
 _EXTRAS = {k: re.compile(v, re.I) for k, v in _EXTRAS.items()}
 _ROTO_GENERICO = re.compile(r'\brot[oa]s?\b|grieta|rajad|golpe fuerte', re.I)
-_MARCAS = re.compile(r'rayas?|rayad|rasgu[ñn]|golpes?|marcas de uso|desconchad|ara[ñn]az|rozad|desgast|piquete', re.I)
+_MARCAS = re.compile(r'rayas?|rayad|rasgu[ñn]|golpes?|marcas de uso|desconchad|ara[ñn]az|rozad|desgast|piquete|picotaz|muesca|desportill', re.I)
+_DEJO = re.compile(r'(?:te\s+lo\s+dejo|lo\s+dejo|se\s+lo\s+dejo|lo\s+vendo|te\s+lo\s+vendo|precio\s+final)\s+(?:en|a|por)\s+(\d{2,4})|'
+                   r'(?:si\s+vienes|en\s+mano|hoy\s+mismo|r[aá]pido)[^.\n]{0,30}?(\d{2,4})\s*(?:€|e\b|euros)', re.I)
 
 
 def _hay(rx, texto):
@@ -141,7 +143,11 @@ def estado(titulo, descripcion):
     if roto:                       # dice «roto» sin decir qué: casi siempre es la pantalla
         averias, roto, supuesto = ['pantalla'], False, True
     sospecha = 'pide envío o pago por adelantado' if _SOSPECHA.search(texto) else None
-    return {'grave': grave, 'averias': averias, 'extras': extras, 'sospecha': sospecha,
+    dicho = None
+    for m in _DEJO.finditer(texto):
+        dicho = int(m.group(1) or m.group(2))
+        break
+    return {'grave': grave, 'averias': averias, 'extras': extras, 'sospecha': sospecha, 'precio_dicho': dicho,
             'marcas': _hay(_MARCAS, texto), 'roto_sin_precisar': roto, 'supuesto': supuesto,
             'reacondicionado': bool(re.search(r'reacondicionad', texto, re.I))}
 
@@ -246,7 +252,7 @@ def evaluar(anuncio, ref):
     else:
         return None, None
     oferta = min(_r5(precio * (0.80 if reparar else 0.88)), _r5(maxp))
-    ratio_mercado = precio / ref
+    ratio_mercado = anuncio.get('precio_anuncio', precio) / ref   # «te lo dejo en…» es regateo, no sospecha
     if est.get('sospecha') or (not reparar and ratio_mercado < 0.70):
         riesgo = 'alto'
     elif (not reparar and ratio_mercado < 0.80) or (reparar and ratio_mercado < 0.30):

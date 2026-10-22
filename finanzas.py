@@ -4,6 +4,7 @@ registro.json:
   compras:     [{id, modelo, capacidad, precio_compra, reparaciones, gasolina, otros, fecha_compra,
                  precio_venta, fecha_venta, publicado: {precio, url, fecha}, ...}]
   movimientos: [{id, fecha, quien, tipo: 'aporte'|'retirada', importe, nota}]
+  gastos:      [{id, fecha, quien, concepto, categoria, importe, pagado: 'caja'|'bolsillo', nota}]
   meses:       {'2026-10': {'presupuesto': 600}}
   ajustes:     {'extra': 200}      # lo que podéis poner de más si sale un chollo caro
 """
@@ -34,15 +35,18 @@ def resumen(registro):
     if not movs:
         return None
     compras = [c for c in registro.get('compras') or [] if c.get('modelo')]
-    aportado = sum(_n(m.get('importe')) * (1 if m.get('tipo') == 'aporte' else -1) for m in movs)
-    gastado = sum(coste(c) for c in compras)
+    gastos = registro.get('gastos') or []
+    aportado = (sum(_n(m.get('importe')) * (1 if m.get('tipo') == 'aporte' else -1) for m in movs)
+                + sum(_n(g.get('importe')) for g in gastos if g.get('pagado') == 'bolsillo'))   # lo que uno paga de su bolsillo cuenta como aporte suyo
+    gastado = sum(coste(c) for c in compras) + sum(_n(g.get('importe')) for g in gastos)
     ingresado = sum(_n(c['precio_venta']) for c in compras if vendida(c))
     stock = [c for c in compras if not vendida(c)]
     caja = aportado - gastado + ingresado
     extra = _n((registro.get('ajustes') or {}).get('extra'))
     return {'caja': round(caja, 2), 'aportado': round(aportado, 2), 'en_stock': round(sum(coste(c) for c in stock), 2),
             'total': round(caja + sum(coste(c) for c in stock), 2), 'extra': extra, 'disponible': round(caja + extra, 2),
-            'beneficio': round(sum(_n(c['precio_venta']) - coste(c) for c in compras if vendida(c)), 2)}
+            'gastos': round(sum(_n(g.get('importe')) for g in gastos), 2),
+            'beneficio': round(sum(_n(c['precio_venta']) - coste(c) for c in compras if vendida(c)) - sum(_n(g.get('importe')) for g in gastos), 2)}
 
 
 def objetivo(registro, mes=None):

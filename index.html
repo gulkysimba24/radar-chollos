@@ -2,7 +2,11 @@
 <html lang="es">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Radar">
 <meta name="theme-color" content="#0A0D12">
 <meta name="color-scheme" content="dark">
 <title>Radar de chollos</title>
@@ -20,6 +24,14 @@
 }
 * { box-sizing: border-box; }
 html, body { margin: 0; background: var(--bg); color: var(--ink); }
+/* pantalla fija como una app: sin zoom y sin moverse de lado */
+html, body { max-width: 100%; overflow-x: hidden; overscroll-behavior-x: none; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+body { touch-action: pan-y; -webkit-tap-highlight-color: transparent; }
+button, a, label, summary, .tile, .chip { touch-action: manipulation; }   /* sin zoom al tocar dos veces */
+.scroll { touch-action: pan-x pan-y; overscroll-behavior-x: contain; }
+#map, .leaflet-container { touch-action: none; }
+/* el iPhone hace zoom solo al tocar un recuadro con letra de menos de 16 px */
+input, select, textarea { font-size: 16px !important; }
 body { font: 15px/1.45 Figtree, system-ui, -apple-system, "Segoe UI", sans-serif; -webkit-font-smoothing: antialiased; padding-bottom: calc(var(--nav) + env(safe-area-inset-bottom)); }
 button, select, input, textarea { font: inherit; color: inherit; }
 a { color: inherit; }
@@ -232,6 +244,31 @@ details p { margin: 6px 0; }
 .tri button[aria-pressed="true"].no { background: var(--chollazo); color: #fff; }
 .tri button[aria-pressed="true"].nose { background: var(--line2); color: var(--ink); }
 .seg-venta { background: var(--bg); border: 1px solid var(--line); border-radius: 10px; padding: 8px 10px; font-size: 13.5px; }
+.resumen { font-size: 13.5px; color: #C9D2DC; }
+.acciones { display: grid; grid-template-columns: 1fr auto auto auto; gap: 6px; margin-top: 2px; }
+.acciones .btn { min-height: 40px; padding: 0 12px; }
+.acciones .btn.star, .acciones .btn.peligro, .acciones .mas-btn { width: 44px; padding: 0; font-size: 17px; }
+.mas { display: flex; flex-wrap: wrap; gap: 6px; }
+.mas .btn { flex: 1 1 calc(50% - 6px); min-height: 38px; font-size: 13.5px; }
+details.det { border-top: 1px solid var(--line); padding-top: 6px; font-size: 13.5px; }
+details.det summary { font-size: 13.5px; color: var(--muted); font-weight: 700; }
+details.det p { margin: 6px 0; }
+#arriba { position: fixed; z-index: 1500; left: 50%; top: calc(10px + env(safe-area-inset-top)); transform: translateX(-50%) translateY(-80px); transition: transform .25s ease; display: inline-flex; align-items: center; gap: 6px; height: 38px; padding: 0 16px; border-radius: 999px; border: 1px solid var(--line2); background: rgba(24,32,43,.95); color: var(--ink); font-weight: 800; font-size: 14px; box-shadow: 0 6px 20px rgba(0,0,0,.5); cursor: pointer; backdrop-filter: blur(6px); }
+#arriba.ver { transform: translateX(-50%) translateY(0); }
+@media (prefers-reduced-motion: reduce) { #arriba { transition: none; } }
+.rango2 { position: relative; width: 150px; height: 24px; display: inline-block; vertical-align: middle; }
+.rango2 input[type=range] { position: absolute; left: 0; top: 0; width: 100%; height: 24px; margin: 0; background: none; pointer-events: none; -webkit-appearance: none; appearance: none; }
+.rango2 input[type=range]::-webkit-slider-runnable-track { height: 4px; background: transparent; }
+.rango2 input[type=range]::-moz-range-track { height: 4px; background: transparent; }
+.rango2 input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; pointer-events: auto; width: 22px; height: 22px; border-radius: 50%; background: var(--chollazo); border: 3px solid var(--bg); margin-top: -9px; cursor: pointer; }
+.rango2 input[type=range]::-moz-range-thumb { pointer-events: auto; width: 18px; height: 18px; border-radius: 50%; background: var(--chollazo); border: 3px solid var(--bg); cursor: pointer; }
+.rango2 .pista { position: absolute; left: 0; right: 0; top: 10px; height: 4px; border-radius: 2px; background: var(--line2); }
+.rango2 .pista i { position: absolute; top: 0; bottom: 0; background: var(--chollazo); border-radius: 2px; }
+details.filtros { margin-bottom: 10px; }
+details.filtros > summary { display: flex; justify-content: space-between; gap: 8px; align-items: center; list-style: none; cursor: pointer; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 9px 12px; font-weight: 700; font-size: 14px; margin-bottom: 8px; }
+details.filtros > summary::-webkit-details-marker { display: none; }
+details.filtros > summary #filtros-res { color: var(--muted); font-weight: 600; font-size: 12.5px; text-align: right; }
+details.filtros[open] > summary #filtros-res { display: none; }
 .big { font: 800 34px/1 "Barlow Condensed", sans-serif; }
 .resultado { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-top: 12px; }
 .pos { color: var(--bueno) !important; } .negv { color: var(--chollazo) !important; }
@@ -269,6 +306,28 @@ dialog .df .btn { flex: 1; }
 
 @media (max-width: 520px) {
   .tiles.t2 { grid-template-columns: repeat(2, 1fr); }
+  .wrap { padding: 10px 12px 24px; }
+  .card .top { padding: 9px 10px 0 14px; font-size: 11.5px; }
+  .card .tag { font-size: 12px; padding: 3px 7px; }
+  .card .head { padding: 6px 10px 0 14px; gap: 10px; }
+  .card .model { font-size: 16px; }
+  .card .where { font-size: 12.5px; }
+  .card .nums { margin: 8px 10px 0 14px; }
+  .card .nums div { padding: 5px 6px; }
+  .card .nums span { font-size: 10px; }
+  .card .niveles { margin: 6px 10px 0 14px; gap: 5px; }
+  .card .niveles div { padding: 4px 7px; }
+  .card .niveles span { font-size: 10px; }
+  .card .niveles b { font-size: 16px; }
+  .card .body { padding: 8px 10px 10px 14px; gap: 6px; }
+  .card .chips { gap: 4px; }
+  .card .chip { font-size: 11.5px; padding: 2px 8px; }
+  .card .risk { font-size: 12.5px; padding: 6px 8px; }
+  .list { gap: 10px; }
+  .controls { gap: 6px; }
+  .row { gap: 8px 12px; }
+  .rango2 { width: 130px; }
+  input[type=range] { width: 110px; }
   h1 { font-size: 24px; }
   .tile { padding: 8px 8px 7px 11px; }
   .tile b { font-size: 23px; }
@@ -298,6 +357,8 @@ dialog .df .btn { flex: 1; }
       <button type="button" class="tile trampa" data-niv="trampa" aria-pressed="false"><b id="n-trampa">0</b><span>¿Trampa?</span></button>
     </div>
     <button type="button" class="tile regatear" data-niv="regatear" aria-pressed="false" style="width:100%;margin:-2px 0 10px;display:flex;align-items:center;gap:10px"><b id="n-regatear" style="font-size:22px">0</b><span style="margin:0">🤝 Para regatear: casi chollos si consigues bajarlos un poco</span></button>
+    <details class="filtros" id="filtros" open>
+      <summary><span>⚙️ Filtros y leyenda</span><span id="filtros-res"></span></summary>
     <div class="controls">
       <div class="seg" role="group" aria-label="Marca">
         <button type="button" data-fam="todos" aria-pressed="true">Todos</button>
@@ -312,7 +373,7 @@ dialog .df .btn { flex: 1; }
       <div class="row">
         <label for="km">Hasta <b id="kmv">60 km</b> <input type="range" id="km" min="5" max="60" step="5" value="60"></label>
         <label for="orden">Ordenar <select id="orden"><option value="beneficio">Más beneficio</option><option value="km">Más cerca</option><option value="nuevo">Más nuevos</option><option value="rapido">Se venden antes</option></select></label>
-        <label for="pmax">Precio hasta <b id="pmaxv">1000 €</b> <input type="range" id="pmax" min="0" max="1000" step="10" value="1000"></label>
+        <label>Precio <b id="pmaxv">0–1000 €</b> <span class="rango2"><span class="pista"><i id="prango"></i></span><input type="range" id="pmin" min="0" max="1000" step="10" value="0" aria-label="Precio mínimo"><input type="range" id="pmax" min="0" max="1000" step="10" value="1000" aria-label="Precio máximo"></span></label>
         <label for="vend"><input type="checkbox" id="vend"> Ver vendidos</label>
         <label for="verdesc"><input type="checkbox" id="verdesc"> Ver descartados (<span id="ndesc">0</span>)</label>
       </div>
@@ -327,6 +388,7 @@ dialog .df .btn { flex: 1; }
       <span><i class="lp normal" id="lg-5"></i>Para reparar</span>
       <span>⭐ Guardado</span>
     </div>
+    </details>
     <div class="layout">
       <div id="map" role="region" aria-label="Mapa de chollos"></div>
       <div class="list" id="list"><div class="empty">Cargando chollos…</div></div>
@@ -382,6 +444,11 @@ dialog .df .btn { flex: 1; }
   <section id="v-registro" data-vista="registro" hidden>
     <h2>Caja y objetivos</h2>
     <div id="caja"></div>
+    <h2 style="margin-top:22px">Gastos</h2>
+    <p class="sub">Todo lo que no es comprar un móvil: fundas, envíos, cables, herramientas, comisiones… Así el beneficio es el de verdad.</p>
+    <div class="tiles t2" id="gastos-tiles"></div>
+    <button class="btn grande" type="button" id="btn-gasto" style="border-color:var(--ofrece);color:var(--ofrece)">＋ Apuntar un gasto</button>
+    <div class="list" id="l-gastos" style="margin-top:12px"></div>
     <h2 style="margin-top:22px">Compras y ventas</h2>
     <p class="sub">Lo que habéis comprado, lo que costó repararlo y por cuánto lo vendéis. El bot aprende de esto para afinar los precios.</p>
     <div class="tiles t2" id="reg-tiles"></div>
@@ -421,8 +488,26 @@ dialog .df .btn { flex: 1; }
 
   <!-- ===================== GASOLINA ===================== -->
   <section id="v-gasolina" data-vista="gasolina" hidden>
-    <h2>Gasolina</h2>
-    <p class="sub">Cuánto cuesta ir a por un móvil con el Seat León, ida y vuelta desde <span class="orig">Fuenlabrada</span>.</p>
+    <h2>Ruta</h2>
+    <p class="sub">A por uno o varios móviles: el mejor orden, si puedes entrar con la pegatina <b>B</b>, la gasolina y botones para Waze.</p>
+    <div class="panel">
+      <p style="margin:0 0 6px"><b style="color:var(--ink)">Paradas</b> · añade los móviles a los que vais (botón «➕ Ruta» en cada ficha) o escribe una dirección</p>
+      <div id="ruta-paradas" class="list" style="gap:8px"></div>
+      <form class="form" id="f-parada" style="margin-top:10px;display:grid;grid-template-columns:1fr auto;gap:8px">
+        <input type="text" id="parada-dir" placeholder="Añadir dirección: Getafe, calle Madrid 10…" list="gas-lista">
+        <button class="btn" type="submit">＋</button>
+      </form>
+      <label style="display:flex;gap:8px;align-items:center;margin:10px 0 0;color:var(--muted);font-size:13.5px"><input type="checkbox" id="ruta-vuelta" checked> Volver a <span class="orig">Fuenlabrada</span> al final</label>
+      <button class="btn main grande" type="button" id="btn-ruta" style="margin-top:10px">🧭 Calcular la mejor ruta</button>
+      <div id="ruta-res"></div>
+    </div>
+    <div class="panel">
+      <p style="margin:0"><b style="color:var(--ink)">🟡 Pegatina B en Madrid</b></p>
+      <p style="margin:6px 0 0">Puedes circular por <b style="color:var(--ink)">toda la ciudad de Madrid</b> (también Plaza Elíptica), <b style="color:var(--ink)">menos el Distrito Centro</b> (dentro de Princesa–Alberto Aguilera–Génova–Recoletos–Prado–Rondas–Bailén): ahí solo puedes entrar para ir directo a un <b style="color:var(--ink)">parking público</b>. Multa: 200 €.</p>
+      <p style="margin:6px 0 0">En los pueblos de alrededor (Fuenlabrada, Getafe, Leganés, Móstoles, Alcorcón…) las zonas de bajas emisiones restringen sobre todo a los coches sin etiqueta. En días de contaminación alta puede haber límites extra: mira los avisos de Madrid 360.</p>
+      <p style="margin:6px 0 0;font-size:12.5px">Waze no deja indicar la pegatina, por eso aquí te avisamos si una parada o el camino toca el Distrito Centro.</p>
+    </div>
+    <h3>Gasolina a un sitio</h3>
     <div class="panel">
       <form class="form" id="f-gas">
         <label>¿A dónde vais?
@@ -447,6 +532,7 @@ dialog .df .btn { flex: 1; }
   </section>
 </div>
 
+<button type="button" id="arriba" aria-label="Volver arriba">↑ <span id="arriba-txt">Volver al mapa</span></button>
 <nav class="tabs" aria-label="Apartados">
   <div class="in">
     <button type="button" data-tab="mapa"><svg viewBox="0 0 24 24"><path d="M12 2a7 7 0 0 0-7 7c0 5.2 7 13 7 13s7-7.8 7-13a7 7 0 0 0-7-7zm0 9.5A2.5 2.5 0 1 1 12 6.5a2.5 2.5 0 0 1 0 5z"/></svg>Mapa</button>
@@ -454,7 +540,7 @@ dialog .df .btn { flex: 1; }
     <button type="button" data-tab="guardados"><svg viewBox="0 0 24 24"><path d="m12 17.3 6.2 3.7-1.6-7 5.4-4.7-7.2-.6L12 2 9.2 8.7 2 9.3l5.4 4.7-1.6 7z"/></svg>Guardados<span class="badge" id="badge-g" hidden></span></button>
     <button type="button" data-tab="registro"><svg viewBox="0 0 24 24"><path d="M19 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z"/></svg>Registro</button>
     <button type="button" data-tab="estudio"><svg viewBox="0 0 24 24"><path d="M3.5 18.5 9.5 12.5l4 4L22 7.9 20.6 6.5l-7.1 8-4-4L2 18z"/></svg>Estudio</button>
-    <button type="button" data-tab="gasolina"><svg viewBox="0 0 24 24"><path d="m19.8 7.2-3.7-3.7-1.1 1.1 2.1 2.1A2.5 2.5 0 0 0 18.5 11.5a2.5 2.5 0 0 0 .9-.2v7.2a1 1 0 0 1-2 0V14a2 2 0 0 0-2-2h-1V5a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v16h10v-7.5h1.5v5a2.5 2.5 0 0 0 5 0V9a2.5 2.5 0 0 0-.7-1.8zM12 10H6V5h6v5z"/></svg>Gasolina</button>
+    <button type="button" data-tab="gasolina"><svg viewBox="0 0 24 24"><path d="M12 2a7 7 0 0 0-7 7c0 3.1 2.2 6.4 4 8.6V22l3-1.5 3 1.5v-4.4c1.8-2.2 4-5.5 4-8.6a7 7 0 0 0-7-7zm0 9.5A2.5 2.5 0 1 1 12 6.5a2.5 2.5 0 0 1 0 5z"/></svg>Ruta<span class="badge" id="badge-r" hidden></span></button>
   </div>
 </nav>
 
@@ -518,6 +604,27 @@ dialog .df .btn { flex: 1; }
   </form>
 </dialog>
 <datalist id="lista-socios"></datalist>
+
+<dialog id="d-gasto" aria-labelledby="dg-t">
+  <form method="dialog" class="form" id="f-gasto">
+    <div class="dh"><h2 id="dg-t">Apuntar gasto</h2><button class="icon-btn" value="cancel" formnovalidate aria-label="Cerrar">✕</button></div>
+    <div class="db form">
+      <div class="dos">
+        <label>¿Quién?<select name="quien" style="width:100%;min-height:42px;background:var(--bg)"></select></label>
+        <label>Importe (€)<input type="number" name="importe" min="0" step="0.01" inputmode="decimal" required></label>
+      </div>
+      <label>¿En qué?<input type="text" name="concepto" maxlength="80" placeholder="Ej.: 3 fundas y protectores" required></label>
+      <div class="dos">
+        <label>Tipo<select name="categoria" style="width:100%;min-height:42px;background:var(--bg)">
+          <option>Accesorios (fundas, cables…)</option><option>Envíos</option><option>Herramientas y piezas</option><option>Gasolina y transporte</option><option>Comisiones</option><option>Otros</option></select></label>
+        <label>Fecha<input type="date" name="fecha" required></label>
+      </div>
+      <label>¿Con qué dinero?<select name="pagado" style="width:100%;min-height:42px;background:var(--bg)">
+        <option value="caja">De la caja común</option><option value="bolsillo">De su bolsillo (cuenta como dinero que pone)</option></select></label>
+    </div>
+    <div class="df"><button type="button" class="btn peligro" id="dg-borrar" hidden>Borrar</button><button type="submit" class="btn verde" value="ok">Guardar</button></div>
+  </form>
+</dialog>
 
 <dialog id="d-pub" aria-labelledby="dp-t">
   <form method="dialog" class="form" id="f-pub">
@@ -595,6 +702,21 @@ dialog .df .btn { flex: 1; }
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script>
+// ------------------------------------------------------------------ sin zoom (como una app)
+['gesturestart', 'gesturechange', 'gestureend'].forEach(ev => document.addEventListener(ev, e => { if (!e.target.closest?.('.leaflet-container')) e.preventDefault(); }, { passive: false }));
+document.addEventListener('touchmove', e => { if (e.touches.length > 1 && !e.target.closest('.leaflet-container')) e.preventDefault(); }, { passive: false });
+
+// ------------------------------------------------------------------ botón para volver arriba
+addEventListener('scroll', () => {
+  const lim = S.tab === 'mapa' ? ($('#map')?.getBoundingClientRect().bottom ?? 0) + scrollY : 500;
+  $('#arriba').classList.toggle('ver', scrollY > lim - 40);
+}, { passive: true });
+document.addEventListener('click', e => {
+  if (e.target.closest('#arriba')) { scrollTo({ top: 0, behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' }); return; }
+  const m = e.target.closest('.mas-btn');
+  if (m) { const box = m.closest('.body').querySelector('.mas'); box.hidden = !box.hidden; m.setAttribute('aria-expanded', !box.hidden); }
+});
+
 // ------------------------------------------------------------------ utilidades
 const $ = s => document.querySelector(s);
 const $$ = s => [...document.querySelectorAll(s)];
@@ -650,9 +772,9 @@ async function cambiar(path, defecto, fn, mensaje) {
 // ------------------------------------------------------------------ datos
 let data = { chollos: [] }, estudio = {}, info = {}, guardados = { items: {} }, registro = { compras: [] };
 let homeLL = [40.2842, -3.7942], map, layer;
-const S = Object.assign({ fam: 'todos', tipo: 'todos', niv: 'todos', km: 60, pmax: 1000, verdesc: false, orden: 'beneficio', vend: false, tab: 'mapa', rf: 'todos', et: 'listo', eo: 'vendidos' }, leer('radar-f3', {}));
+const S = Object.assign({ fam: 'todos', tipo: 'todos', niv: 'todos', km: 60, pmin: 0, pmax: 1000, verdesc: false, orden: 'beneficio', vend: false, tab: 'mapa', rf: 'todos', et: 'listo', eo: 'vendidos' }, leer('radar-f3', {}));
 S.sel = '';
-const saveS = () => escribir('radar-f3', { fam: S.fam, tipo: S.tipo, niv: S.niv, km: S.km, pmax: S.pmax, verdesc: S.verdesc, orden: S.orden, vend: S.vend, tab: S.tab, rf: S.rf, et: S.et, eo: S.eo });
+const saveS = () => escribir('radar-f3', { fam: S.fam, tipo: S.tipo, niv: S.niv, km: S.km, pmin: S.pmin, pmax: S.pmax, verdesc: S.verdesc, orden: S.orden, vend: S.vend, tab: S.tab, rf: S.rf, et: S.et, eo: S.eo });
 
 async function pages(nombre, defecto) {
   try { const r = await fetch(nombre + '?t=' + Date.now(), { cache: 'no-store' }); if (!r.ok) return defecto; return await r.json(); } catch (e) { return defecto; }
@@ -700,7 +822,7 @@ const DESC_LOCAL = new Set(leer('radar-descartados', []));
 const descartado = id => !!(descartados.items || {})[id] || DESC_LOCAL.has(id);
 function base() {
   return data.chollos.filter(c => (S.fam === 'todos' || c.familia === S.fam) && (S.tipo === 'todos' || c.tipo === S.tipo)
-    && (c.km == null || c.km <= S.km) && (S.pmax >= 1000 || c.precio <= S.pmax)
+    && (c.km == null || c.km <= S.km) && c.precio >= (S.pmin || 0) && (S.pmax >= 1000 || c.precio <= S.pmax)
     && (S.vend || c.estado !== 'vendido') && (S.verdesc || !descartado(c.id)));
 }
 async function descartar(id, deshacer) {
@@ -757,6 +879,7 @@ function fichaHTML(c, o = {}) {
   const chips = [
     c.reservado && !vend ? `<span class="chip">⏸️ <b>Reservado</b>: puede que lo venda a otro</span>` : '',
     c.origen === 'milanuncios' ? `<span class="chip">📰 <b>Milanuncios</b> · ubicación aproximada</span>` : '',
+    c.lat != null && dentro(c.lat, c.lng) ? `<span class="chip" style="color:#F7C873">⚠️ Distrito Centro: con la B solo a un parking público</span>` : '',
     (() => { const f = finResumen(); return f && !vend && c.oferta > f.caja ? `<span class="chip">💸 Os faltan <b>${eur(c.oferta - f.caja)}</b> de caja</span>` : ''; })(),
     c.profesional ? `<span class="chip">🏪 Perfil destacado: pregunta si da factura</span>` : '',
     cat(c) === 'regatear' ? `<span class="chip">🤝 Piden un <b>${Math.round((c.precio / Math.max(c.max, 1) - 1) * 100)} %</b> más que el máximo</span>` : '',
@@ -784,23 +907,27 @@ function fichaHTML(c, o = {}) {
     ${niveles}
     <div class="body">
       ${o.extra || ''}${bajada}${vend ? '' : aviso(c)}
+      <div class="resumen">${esc(c.resumen)}${c.venta_rango ? ` · se vende <b>${eur(c.venta_rango[0])}–${eur(c.venta_rango[1])}</b>` : ''}${c.fiabilidad ? ` <span class="fiab ${c.fiabilidad}">${c.fiabilidad}</span>` : ''}</div>
       ${chips ? `<div class="chips">${chips}</div>` : ''}
-      <div>${esc(c.resumen)}</div>
-      ${c.reparacion && c.reparacion.length ? `<div><b>Reparación:</b> ${esc(c.reparacion.join(', '))}</div>` : ''}
-      <div>${c.venta_rango ? `<b>Se vende entre ${eur(c.venta_rango[0])} y ${eur(c.venta_rango[1])}</b> (normal ~${eur(c.venta)})` : `<b>Se vende por</b> ~${eur(c.venta)}`}
-        ${c.fiabilidad ? ` <span class="fiab ${c.fiabilidad}">fiabilidad ${c.fiabilidad}</span>` : ''}${c.fuente_venta ? `<br><span style="color:var(--faint);font-size:12.5px">Según ${esc(c.fuente_venta)}${c.factor_estado && Math.abs(c.factor_estado - 1) > 0.005 ? ` · ajustado por su estado (${c.factor_estado > 1 ? '+' : ''}${Math.round((c.factor_estado - 1) * 100)} %)` : ''}</span>` : ''}</div>
-      ${(c.preguntas || []).length ? `<details ${S.sel === c.id ? 'open' : ''}><summary>Qué preguntar</summary><ul>${c.preguntas.map(p => `<li>${esc(p)}</li>`).join('')}</ul></details>` : ''}
-      ${c.mensaje ? `<details><summary>Cómo regatear</summary><p>${esc(c.regateo)}</p><div class="msg">${esc(c.mensaje)}</div>
-        <p><button type="button" class="btn" data-copiar="${esc(c.mensaje)}">Copiar mensaje</button></p></details>` : ''}
-      <div class="actions">
+      <details class="det" ${S.sel === c.id ? 'open' : ''}><summary>Detalles, preguntas y regateo</summary>
+        ${c.reparacion && c.reparacion.length ? `<p><b>Reparación:</b> ${esc(c.reparacion.join(', '))}</p>` : ''}
+        <p>${c.venta_rango ? `<b>Se vende entre ${eur(c.venta_rango[0])} y ${eur(c.venta_rango[1])}</b> (normal ~${eur(c.venta)})` : `<b>Se vende por</b> ~${eur(c.venta)}`}${c.fuente_venta ? `<br><span style="color:var(--faint);font-size:12.5px">Según ${esc(c.fuente_venta)}${c.factor_estado && Math.abs(c.factor_estado - 1) > 0.005 ? ` · ajustado por su estado (${c.factor_estado > 1 ? '+' : ''}${Math.round((c.factor_estado - 1) * 100)} %)` : ''}</span>` : ''}</p>
+        ${(c.preguntas || []).length ? `<p style="margin-bottom:2px"><b>Qué preguntar</b></p><ul>${c.preguntas.map(p => `<li>${esc(p)}</li>`).join('')}</ul>` : ''}
+        ${c.mensaje ? `<p><b>Cómo regatear:</b> ${esc(c.regateo)}</p><div class="msg">${esc(c.mensaje)}</div>
+          <p><button type="button" class="btn" data-copiar="${esc(c.mensaje)}">Copiar mensaje</button></p>` : ''}
+      </details>
+      <div class="acciones">
         <a class="btn main" href="${esc(c.url)}" target="_blank" rel="noopener">Abrir en ${c.origen === 'milanuncios' ? 'Milanuncios' : 'Wallapop'}</a>
-        ${o.gid ? '' : `<button type="button" class="btn star ${on ? 'on' : ''}" data-guardar="${esc(c.id)}" aria-pressed="${on}">${on ? '★ Guardado' : '☆ Guardar'}</button>`}
-        ${c.lat != null ? `<a class="btn" href="${maps(c)}" target="_blank" rel="noopener">Cómo llegar</a>` : ''}
-        ${c.lat != null && !o.gid ? `<button type="button" class="btn" data-fly="${esc(c.id)}">Ver en el mapa</button>` : ''}
-        <button type="button" class="btn" data-check="${esc(o.gid || c.id)}">✅ Checklist en persona</button>
-        <button type="button" class="btn" data-comprar="${esc(o.gid || c.id)}">🛒 Lo hemos comprado</button>
-        ${o.gid ? '' : descartado(c.id) ? `<button type="button" class="btn" data-recuperar="${esc(c.id)}">↩️ Recuperar</button>` : `<button type="button" class="btn peligro" data-descartar="${esc(c.id)}">🚫 No me interesa</button>`}
-        ${o.gid ? `<button type="button" class="btn peligro" data-quitar="${esc(o.gid)}">Quitar</button>` : ''}
+        ${o.gid ? '' : `<button type="button" class="btn star ${on ? 'on' : ''}" data-guardar="${esc(c.id)}" aria-pressed="${on}" aria-label="${on ? 'Guardado' : 'Guardar'}">${on ? '★' : '☆'}</button>`}
+        ${o.gid ? `<button type="button" class="btn peligro" data-quitar="${esc(o.gid)}" aria-label="Quitar de guardados">✕</button>` : descartado(c.id) ? `<button type="button" class="btn" data-recuperar="${esc(c.id)}" aria-label="Recuperar">↩️</button>` : `<button type="button" class="btn peligro" data-descartar="${esc(c.id)}" aria-label="No me interesa">🚫</button>`}
+        <button type="button" class="btn mas-btn" aria-expanded="false" aria-label="Más opciones">⋯</button>
+      </div>
+      <div class="mas" hidden>
+        ${c.lat != null ? `<a class="btn" href="${maps(c)}" target="_blank" rel="noopener">🚗 Cómo llegar</a>` : ''}
+        ${c.lat != null && !o.gid ? `<button type="button" class="btn" data-fly="${esc(c.id)}">📍 Ver en el mapa</button>` : ''}
+        <button type="button" class="btn" data-check="${esc(o.gid || c.id)}">✅ Checklist</button>
+        ${c.lat != null ? `<button type="button" class="btn" data-ruta="${esc(o.gid || c.id)}">➕ Ruta</button>` : ''}
+        <button type="button" class="btn" data-comprar="${esc(o.gid || c.id)}">🛒 Comprado</button>
       </div>
     </div>
   </article>`;
@@ -1112,6 +1239,7 @@ function calcularAnalisis() {
         ${anItem ? `<button type="button" class="btn star" id="an-guardar">☆ Guardar y avisar</button>` : ''}
         ${anItem?.lat != null ? `<a class="btn" href="${maps(anItem)}" target="_blank" rel="noopener">Cómo llegar</a>` : ''}
         <button type="button" class="btn" id="an-check">✅ Checklist en persona</button>
+        ${anItem?.lat != null ? '<button type="button" class="btn" id="an-ruta">➕ Ruta</button>' : ''}
         <button type="button" class="btn" id="an-comprar">🛒 Lo hemos comprado</button>
       </div>
     </div></article>`;
@@ -1123,6 +1251,7 @@ function calcularAnalisis() {
     } catch (err) { if (err.message !== 'sin clave') toast(err.message, true); } finally { b.disabled = false; }
   });
   $('#an-check').onclick = () => abrirCheck(ficha);
+  $('#an-ruta') && ($('#an-ruta').onclick = () => anadirRuta(ficha));
   $('#an-comprar').onclick = () => {
     abrirCompra.pre = { wid: anItem?.id || null, venta_estimada: Math.round(venta) };
     abrirCompra(null, { modelo, capacidad: ficha.capacidad, bateria: bat ?? '', estado: tipo, precio_compra: oferta, gasolina: g ? Math.round(g.euros * 10) / 10 : '', url: anItem?.url || '',
@@ -1137,6 +1266,7 @@ const beneficio = c => vendida(c) ? num(c.precio_venta) - coste(c) : null;
 const diasEntre = (a, b) => a && b ? Math.max(0, Math.round((new Date(b) - new Date(a)) / DIA)) : null;
 function renderRegistro() {
   renderCaja();
+  renderGastos();
   const cs = (registro.compras || []).slice().sort((a, b) => vendida(a) - vendida(b) || (b.fecha_compra || '').localeCompare(a.fecha_compra || ''));
   const vend = cs.filter(vendida), stock = cs.filter(c => !vendida(c));
   const mes = hoyISO().slice(0, 7);
@@ -1319,12 +1449,13 @@ const MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', '
 function finResumen() {
   const movs = registro.movimientos || [];
   if (!movs.length) return null;
-  const cs = (registro.compras || []).filter(c => c.modelo);
-  const aportado = movs.reduce((s, m) => s + (num(m.importe) || 0) * (m.tipo === 'aporte' ? 1 : -1), 0);
-  const gastado = cs.reduce((s, c) => s + coste(c), 0), ingresado = cs.filter(vendida).reduce((s, c) => s + num(c.precio_venta), 0);
+  const cs = (registro.compras || []).filter(c => c.modelo), gs = registro.gastos || [];
+  const gastosTot = gs.reduce((s, g) => s + (num(g.importe) || 0), 0);
+  const aportado = movs.reduce((s, m) => s + (num(m.importe) || 0) * (m.tipo === 'aporte' ? 1 : -1), 0) + gs.filter(g => g.pagado === 'bolsillo').reduce((s, g) => s + (num(g.importe) || 0), 0);
+  const gastado = cs.reduce((s, c) => s + coste(c), 0) + gastosTot, ingresado = cs.filter(vendida).reduce((s, c) => s + num(c.precio_venta), 0);
   const stock = cs.filter(c => !vendida(c)).reduce((s, c) => s + coste(c), 0);
   const caja = aportado - gastado + ingresado, extra = num(registro.ajustes?.extra) || 0;
-  return { caja, aportado, stock, total: caja + stock, extra, disponible: caja + extra, beneficio: cs.filter(vendida).reduce((s, c) => s + beneficio(c), 0) };
+  return { caja, aportado, stock, total: caja + stock, extra, disponible: caja + extra, gastos: gastosTot, beneficio: cs.filter(vendida).reduce((s, c) => s + beneficio(c), 0) - gastosTot };
 }
 function finObjetivo(mes) {
   const r = finResumen() || {};
@@ -1342,6 +1473,7 @@ function finObjetivo(mes) {
 function serieDinero() {
   const ev = [];
   (registro.movimientos || []).forEach(m => ev.push({ f: m.fecha, caja: (num(m.importe) || 0) * (m.tipo === 'aporte' ? 1 : -1), ap: (num(m.importe) || 0) * (m.tipo === 'aporte' ? 1 : -1), st: 0 }));
+  (registro.gastos || []).forEach(g => { const v = num(g.importe) || 0, bol = g.pagado === 'bolsillo'; if (g.fecha) ev.push({ f: g.fecha, caja: bol ? 0 : -v, ap: bol ? v : 0, st: 0 }); });
   (registro.compras || []).filter(c => c.modelo).forEach(c => {
     if (c.fecha_compra) ev.push({ f: c.fecha_compra, caja: -coste(c), ap: 0, st: coste(c) });
     if (vendida(c) && c.fecha_venta) ev.push({ f: c.fecha_venta, caja: num(c.precio_venta), ap: 0, st: -coste(c) });
@@ -1405,14 +1537,17 @@ function renderCaja() {
   }
   const porSocio = {};
   (registro.movimientos || []).forEach(m => { porSocio[m.quien] = (porSocio[m.quien] || 0) + (num(m.importe) || 0) * (m.tipo === 'aporte' ? 1 : -1); });
+  (registro.gastos || []).filter(g => g.pagado === 'bolsillo').forEach(g => { porSocio[g.quien] = (porSocio[g.quien] || 0) + (num(g.importe) || 0); });
   const totalAp = Object.values(porSocio).reduce((a, b) => a + Math.max(0, b), 0) || 1;
   const ob = finObjetivo(mes);
-  const hecho = (registro.compras || []).filter(c => vendida(c) && (c.fecha_venta || '').startsWith(mes)).reduce((s, c) => s + beneficio(c), 0);
+  const gastosMes = (registro.gastos || []).filter(g => (g.fecha || '').startsWith(mes)).reduce((s, g) => s + (num(g.importe) || 0), 0);
+  const hecho = (registro.compras || []).filter(c => vendida(c) && (c.fecha_venta || '').startsWith(mes)).reduce((s, c) => s + beneficio(c), 0) - gastosMes;
   const [y, m] = mes.split('-').map(Number), diasMes = new Date(y, m, 0).getDate(), hoyD = +hoyISO().slice(8, 10), quedan = diasMes - hoyD;
   const escala = Math.max(ob.ambicioso * 1.08, hecho, 10), pct = v => Math.max(0, Math.min(100, v / escala * 100));
   const falta = Math.max(0, ob.realista - hecho);
   const meses = {};
   (registro.compras || []).filter(vendida).forEach(c => { const k = (c.fecha_venta || '').slice(0, 7); if (k) meses[k] = (meses[k] || 0) + beneficio(c); });
+  (registro.gastos || []).forEach(g => { const k = (g.fecha || '').slice(0, 7); if (k) meses[k] = (meses[k] || 0) - (num(g.importe) || 0); });
   const mesesL = Object.keys(meses).sort().slice(-6).map(k => ({ l: MESES[+k.slice(5) - 1].slice(0, 3), v: Math.round(meses[k]) }));
   const pctObj = Math.round(hecho / Math.max(ob.realista, 1) * 100);
   $('#caja').innerHTML = `
@@ -1420,7 +1555,7 @@ function renderCaja() {
       <div class="tile verde"><b>${eur(r.caja)}</b><span>Caja disponible</span></div>
       <div class="tile azul"><b>${eur(r.total)}</b><span>Dinero total (caja + stock)</span></div>
       <div class="tile ambar"><b>${eur(r.stock)}</b><span>Metido en móviles</span></div>
-      <div class="tile ${r.beneficio >= 0 ? 'verde' : 'rojo'}"><b>${signo(r.beneficio)}</b><span>Beneficio · empezasteis con ${eur(r.aportado)}</span></div>
+      <div class="tile ${r.beneficio >= 0 ? 'verde' : 'rojo'}"><b>${signo(r.beneficio)}</b><span>Beneficio neto${r.gastos ? ' (con gastos)' : ''} · empezasteis con ${eur(r.aportado)}</span></div>
     </div>
     <div class="panel objetivo">
       <p style="margin:0"><b style="color:var(--ink);font-size:15px">🎯 Objetivo de ${MESES[m - 1]}</b> · lleváis <b class="${hecho >= 0 ? 'pos' : 'negv'}">${signo(hecho)}</b> de <b style="color:var(--ink)">${eur(ob.realista)}</b> (${pctObj} %)</p>
@@ -1575,6 +1710,132 @@ $('#dk-comprar').onclick = () => {
     gasolina: g ? Math.round(g.euros * 10) / 10 : '', url: c.url || '', reparaciones: [] });
 };
 
+// ------------------------------------------------------------------ gastos
+const SOCIOS_BASE = ['Gulky', 'Striker'];
+function socios() {
+  const extra = [...(registro.movimientos || []).map(m => m.quien), ...(registro.gastos || []).map(g => g.quien)].filter(Boolean);
+  return [...new Set([...SOCIOS_BASE, ...extra])];
+}
+function yoSocio() { const n = (AJ.nombre || '').toLowerCase(); return socios().find(s => n && (n.startsWith(s.toLowerCase()) || s.toLowerCase().startsWith(n))) || ''; }
+function renderGastos() {
+  const gs = (registro.gastos || []).slice().sort((a, b) => (b.fecha || '').localeCompare(a.fecha || ''));
+  const mes = hoyISO().slice(0, 7), tot = gs.reduce((s, g) => s + (num(g.importe) || 0), 0), delMes = gs.filter(g => (g.fecha || '').startsWith(mes)).reduce((s, g) => s + (num(g.importe) || 0), 0);
+  const porQ = {}; gs.forEach(g => { porQ[g.quien] = (porQ[g.quien] || 0) + (num(g.importe) || 0); });
+  $('#gastos-tiles').innerHTML = `<div class="tile ambar"><b>${eur2(tot)}</b><span>Gastos en total</span></div><div class="tile ambar"><b>${eur2(delMes)}</b><span>Este mes</span></div>`
+    + socios().map(q => `<div class="tile"><b>${eur2(porQ[q] || 0)}</b><span>Ha gastado ${esc(q)}</span></div>`).join('');
+  $('#l-gastos').innerHTML = gs.length ? gs.slice(0, 60).map(g => `<div class="venta-row" data-gasto="${esc(g.id)}" style="cursor:pointer"><div>
+      <b>${esc(g.concepto || g.categoria || 'Gasto')}</b><div class="d">${esc(fecha(g.fecha))} · ${esc(g.quien || '')} · ${esc(g.categoria || '')}${g.pagado === 'bolsillo' ? ' · de su bolsillo' : ''}</div></div>
+      <div class="p">${eur2(num(g.importe) || 0)}</div></div>`).join('')
+    : '<div class="empty">Aún no habéis apuntado gastos.</div>';
+  $$('[data-gasto]').forEach(el => el.onclick = () => abrirGasto(gs.find(g => g.id === el.dataset.gasto)));
+}
+let gastoEdit = null;
+function abrirGasto(g) {
+  gastoEdit = g || null;
+  const f = $('#f-gasto'); f.reset();
+  f.quien.innerHTML = socios().map(q => `<option>${esc(q)}</option>`).join('');
+  f.quien.value = g?.quien || yoSocio() || socios()[0];
+  f.importe.value = g?.importe ?? ''; f.concepto.value = g?.concepto || ''; f.fecha.value = g?.fecha || hoyISO();
+  if (g?.categoria) f.categoria.value = g.categoria; f.pagado.value = g?.pagado || 'caja';
+  $('#dg-t').textContent = g ? 'Editar gasto' : 'Apuntar gasto'; $('#dg-borrar').hidden = !g;
+  $('#d-gasto').showModal();
+}
+$('#btn-gasto').onclick = () => abrirGasto();
+$('#f-gasto').addEventListener('submit', async e => {
+  if (e.submitter?.value !== 'ok') return; e.preventDefault();
+  const f = e.target, g = { id: gastoEdit?.id || 'g' + Date.now(), quien: f.quien.value, importe: num(f.importe.value), concepto: f.concepto.value.trim(), categoria: f.categoria.value, fecha: f.fecha.value, pagado: f.pagado.value };
+  if (!g.importe) { toast('Pon el importe', true); return; }
+  if (await guardarReg(j => { j.gastos = (j.gastos || []).filter(x => x.id !== g.id); j.gastos.push(g); }, `Gasto: ${g.concepto} ${g.importe} € (${g.quien})`, '🧾 Gasto apuntado')) $('#d-gasto').close();
+});
+$('#dg-borrar').onclick = async () => {
+  if (!gastoEdit || !confirm('¿Borrar este gasto?')) return;
+  if (await guardarReg(j => { j.gastos = (j.gastos || []).filter(x => x.id !== gastoEdit.id); }, 'Borrar gasto', 'Borrado')) $('#d-gasto').close();
+};
+
+// ------------------------------------------------------------------ zonas de bajas emisiones y rutas
+// Distrito Centro de Madrid (ZBEDEP): con pegatina B solo se puede entrar para ir a un parking público.
+const CENTRO = [[40.4300, -3.7148], [40.4295, -3.7090], [40.4290, -3.7025], [40.4253, -3.6905], [40.4192, -3.6930], [40.4150, -3.6940],
+  [40.4070, -3.6925], [40.4045, -3.7025], [40.4070, -3.7115], [40.4103, -3.7145], [40.4180, -3.7140], [40.4240, -3.7125]];
+function dentro(lat, lng, pol = CENTRO) {
+  let d = false;
+  for (let i = 0, j = pol.length - 1; i < pol.length; j = i++) {
+    const [yi, xi] = pol[i], [yj, xj] = pol[j];
+    if ((yi > lat) !== (yj > lat) && lng < (xj - xi) * (lat - yi) / (yj - yi) + xi) d = !d;
+  }
+  return d;
+}
+const ZBE_TXT = '⚠️ Distrito Centro: con la B solo puedes entrar para ir a un parking público';
+const waze = p => `https://waze.com/ul?ll=${p.lat},${p.lng}&navigate=yes`;
+let RUTA = leer('radar-ruta', []);
+const guardarRuta = () => { escribir('radar-ruta', RUTA); $('#badge-r').hidden = !RUTA.length; $('#badge-r').textContent = RUTA.length; };
+function anadirRuta(c) {
+  if (c.lat == null) { toast('Este anuncio no tiene ubicación', true); return; }
+  if (RUTA.some(p => p.id === c.id)) { toast('Ya está en la ruta'); return; }
+  RUTA.push({ id: c.id, nombre: `${c.modelo}${c.precio ? ' · ' + eur(c.precio) : ''}`, zona: c.zona || '', lat: c.lat, lng: c.lng, url: c.url });
+  guardarRuta(); renderRuta(); toast(`➕ Añadido a la ruta (${RUTA.length} parada${RUTA.length > 1 ? 's' : ''})`);
+}
+function renderRuta() {
+  guardarRuta();
+  $('#ruta-paradas').innerHTML = RUTA.length ? RUTA.map((p, i) => `<div class="venta-row" style="align-items:center"><div>
+      <b>${esc(p.nombre)}</b><div class="d">${esc(p.zona || '')}${dentro(p.lat, p.lng) ? ` · <span style="color:#F7C873">${ZBE_TXT}</span>` : ' · ✅ puedes entrar con la B'}</div></div>
+      <div style="display:flex;gap:6px"><a class="btn" href="${waze(p)}" target="_blank" rel="noopener" style="min-height:34px;padding:0 10px">Waze</a><button type="button" class="icon-btn" data-quitar-parada="${i}" aria-label="Quitar parada" style="width:34px;height:34px">✕</button></div></div>`).join('')
+    : '<div class="empty" style="padding:14px">Aún no hay paradas. Pulsa «➕ Ruta» en un chollo o guardado, o escribe una dirección abajo.</div>';
+  $$('[data-quitar-parada]').forEach(b => b.onclick = () => { RUTA.splice(+b.dataset.quitarParada, 1); renderRuta(); $('#ruta-res').innerHTML = ''; });
+}
+$('#f-parada').addEventListener('submit', async e => {
+  e.preventDefault();
+  const q = $('#parada-dir').value.trim(); if (!q) return;
+  try {
+    const d = await geocodificar(/madrid/i.test(q) ? q : q + ', Comunidad de Madrid');
+    RUTA.push({ id: 'dir-' + Date.now(), nombre: q, zona: d.nombre, lat: d.lat, lng: d.lng });
+    $('#parada-dir').value = ''; renderRuta();
+  } catch (err) { toast(err.message, true); }
+});
+function permutaciones(xs) { if (xs.length <= 1) return [xs]; return xs.flatMap((x, i) => permutaciones([...xs.slice(0, i), ...xs.slice(i + 1)]).map(p => [x, ...p])); }
+$('#btn-ruta').onclick = async () => {
+  if (!RUTA.length) { toast('Añade al menos una parada', true); return; }
+  if (RUTA.length > 7) { toast('Como mucho 7 paradas a la vez', true); return; }
+  const res = $('#ruta-res'); res.innerHTML = '<p style="margin-top:12px">Calculando la mejor ruta…</p>';
+  const casa = { lat: homeLL[0], lng: homeLL[1], nombre: data.origen?.nombre || 'Fuenlabrada' };
+  const pts = [casa, ...RUTA], vuelta = $('#ruta-vuelta').checked;
+  try {
+    const tj = await (await fetch('https://router.project-osrm.org/table/v1/driving/' + pts.map(p => `${p.lng},${p.lat}`).join(';') + '?annotations=duration,distance')).json();
+    if (tj.code !== 'Ok') throw new Error('No se pudo calcular la ruta');
+    const D = tj.durations, K = tj.distances;
+    let mejor = null;
+    for (const orden of permutaciones(RUTA.map((_, i) => i + 1))) {
+      let t = 0, prev = 0; for (const i of orden) { t += D[prev][i]; prev = i; } if (vuelta) t += D[prev][0];
+      if (!mejor || t < mejor.t) mejor = { t, orden };
+    }
+    const sec = [0, ...mejor.orden, ...(vuelta ? [0] : [])];
+    let km = 0; const tramos = [];
+    for (let i = 1; i < sec.length; i++) { km += K[sec[i - 1]][sec[i]] / 1000; tramos.push({ de: sec[i - 1], a: sec[i], min: D[sec[i - 1]][sec[i]] / 60, km: K[sec[i - 1]][sec[i]] / 1000 }); }
+    // ¿el camino atraviesa el Distrito Centro?
+    let porCentro = false;
+    try {
+      const rj = await (await fetch('https://router.project-osrm.org/route/v1/driving/' + sec.map(i => `${pts[i].lng},${pts[i].lat}`).join(';') + '?overview=full&geometries=geojson')).json();
+      porCentro = (rj.routes?.[0]?.geometry?.coordinates || []).some(([lng, lat]) => dentro(lat, lng));
+    } catch (e) {}
+    const litros = km * AJ.consumo / 100, euros = litros * AJ.litro;
+    const paradasCentro = RUTA.filter(p => dentro(p.lat, p.lng));
+    const gm = 'https://www.google.com/maps/dir/?api=1&' + new URLSearchParams({ origin: `${casa.lat},${casa.lng}`, destination: `${pts[sec.at(-1)].lat},${pts[sec.at(-1)].lng}`,
+      waypoints: sec.slice(1, -1).map(i => `${pts[i].lat},${pts[i].lng}`).join('|'), travelmode: 'driving' });
+    res.innerHTML = `<div class="resultado">
+        <div class="tile azul"><b>${Math.round(mejor.t / 60)} min</b><span>Conduciendo en total</span></div>
+        <div class="tile"><b>${Math.round(km)} km</b><span>${vuelta ? 'Con la vuelta' : 'Sin la vuelta'}</span></div>
+        <div class="tile rojo"><b>${eur2(euros)}</b><span>Gasolina</span></div>
+        <div class="tile ${paradasCentro.length || porCentro ? 'ambar' : 'verde'}"><b>${paradasCentro.length || porCentro ? '⚠️ Ojo' : '✅ Sí'}</b><span>Pegatina B</span></div></div>
+      ${paradasCentro.length ? `<div class="risk medio" style="margin-top:10px"><b>${paradasCentro.length === 1 ? 'Una parada está' : paradasCentro.length + ' paradas están'} en el Distrito Centro.</b> Con la B solo podéis entrar para dejar el coche en un parking público; quedad mejor fuera (por ejemplo en una boca de metro de las Rondas).</div>` : ''}
+      ${!paradasCentro.length && porCentro ? `<div class="risk medio" style="margin-top:10px"><b>El camino más rápido cruza el Distrito Centro.</b> En Waze, si te propone ir por Gran Vía, Sol o el centro, elige la ruta alternativa por la M-30 o las Rondas.</div>` : ''}
+      <p class="sub" style="margin:12px 0 6px">Orden recomendado (pulsa cada uno para abrirlo en Waze):</p>
+      ${tramos.map((t, n) => `<div class="venta-row" style="align-items:center"><div><b>${n + 1}. ${esc(t.a === 0 ? 'Vuelta a ' + casa.nombre : pts[t.a].nombre)}</b>
+          <div class="d">${Math.round(t.min)} min · ${t.km.toFixed(1).replace('.', ',')} km${t.a !== 0 && dentro(pts[t.a].lat, pts[t.a].lng) ? ' · ⚠️ Distrito Centro' : ''}</div></div>
+          <a class="btn ${n === 0 ? 'main' : ''}" href="${waze(pts[t.a])}" target="_blank" rel="noopener" style="min-height:36px">🚗 Waze</a></div>`).join('')}
+      <div class="actions" style="margin-top:10px"><a class="btn" href="${gm}" target="_blank" rel="noopener">🗺️ Ruta completa en Google Maps</a></div>
+      <p class="sub" style="margin:8px 0 0;font-size:12.5px">Waze solo navega a un sitio cada vez: al llegar a una parada, vuelve aquí y pulsa la siguiente. Google Maps sí lleva todas las paradas seguidas.</p>`;
+  } catch (err) { res.innerHTML = `<p style="margin-top:12px;color:#FF8A94">${esc(err.message || 'No se pudo calcular la ruta')}</p>`; }
+};
+
 // ------------------------------------------------------------------ estudio
 let verUltimas = 30;
 function renderEstudio() {
@@ -1642,6 +1903,7 @@ function renderEstudio() {
 // ------------------------------------------------------------------ gasolina
 let destinoFijo = null;
 function renderGasolina() {
+  renderRuta();
   $('#aj-consumo').value = AJ.consumo; $('#aj-litro').value = AJ.litro;
   const filas = data.chollos.filter(c => c.estado !== 'vendido' && c.km != null).sort((a, b) => a.km - b.km).slice(0, 40);
   $('#t-gas').innerHTML = filas.length ? `<tr><th>Chollo</th><th class="n">Km ida</th><th class="n">Gasolina</th><th class="n">Ganas</th></tr>` + filas.map(c => {
@@ -1677,13 +1939,16 @@ $('#f-gas').addEventListener('submit', async e => {
       <div class="tile azul"><b>${Math.round(total)} km</b><span>${Math.round(ida)} km de ida${r.min ? ' · ' + Math.round(r.min) + ' min' : ''}</span></div>
       <div class="tile ambar"><b>${litros.toFixed(1).replace('.', ',')} l</b><span>a ${AJ.consumo} l/100 km</span></div>
       <div class="tile"><b>${eur2(euros / 2)}</b><span>Solo ida</span></div></div>
-      <p class="sub" style="margin:8px 0 0">${r.exacta ? 'Ruta por carretera más rápida (OpenStreetMap).' : 'Aproximado: no se pudo calcular la ruta exacta.'}</p>`;
+      <p class="sub" style="margin:8px 0 0">${dentro(dest.lat, dest.lng) ? `<b style="color:#F7C873">${ZBE_TXT}.</b> ` : '✅ Puedes llegar con la pegatina B. '}${r.exacta ? 'Ruta por carretera más rápida (OpenStreetMap).' : 'Aproximado: no se pudo calcular la ruta exacta.'}</p>
+      <div class="actions" style="margin-top:8px"><a class="btn main" href="${waze(dest)}" target="_blank" rel="noopener">🚗 Abrir en Waze</a><button type="button" class="btn" id="gas-a-ruta">➕ Añadir a la ruta</button></div>`;
+    $('#gas-a-ruta').onclick = () => { RUTA.push({ id: 'dir-' + Date.now(), nombre: q, zona: dest.nombre, lat: dest.lat, lng: dest.lng }); renderRuta(); toast('➕ Añadido a la ruta'); };
   } catch (err) { res.innerHTML = `<p style="margin-top:12px;color:#FF8A94">${esc(err.message)}</p>`; }
 });
 
 // ------------------------------------------------------------------ pestañas y eventos
 function irA(tab, sinScroll) {
   S.tab = tab; saveS();
+  $('#arriba-txt').textContent = tab === 'mapa' ? 'Volver al mapa' : 'Arriba'; $('#arriba').classList.remove('ver');
   $$('[data-vista]').forEach(s => s.hidden = s.dataset.vista !== tab);
   $$('[data-tab]').forEach(b => b.dataset.tab === tab ? b.setAttribute('aria-current', 'page') : b.removeAttribute('aria-current'));
   if (tab === 'mapa' && map) setTimeout(() => map.invalidateSize(), 50);
@@ -1698,7 +1963,9 @@ function syncControls() {
   $$('[data-niv]').forEach(b => b.setAttribute('aria-pressed', b.dataset.niv === S.niv));
   $$('[data-rf]').forEach(b => b.setAttribute('aria-pressed', b.dataset.rf === S.rf));
   $$('[data-et]').forEach(b => b.setAttribute('aria-pressed', b.dataset.et === S.et));
-  $('#pmax').value = S.pmax; $('#pmaxv').textContent = S.pmax >= 1000 ? 'sin límite' : S.pmax + ' €'; $('#verdesc').checked = S.verdesc;
+  $('#pmin').value = S.pmin || 0; $('#pmax').value = S.pmax; pintarPrecio();
+  $('#filtros-res').textContent = [S.fam !== 'todos' ? (S.fam === 'iphone' ? 'iPhone' : 'Android') : '', S.tipo !== 'todos' ? (S.tipo === 'listo' ? 'Listos' : 'A reparar') : '',
+    S.km + ' km', `${S.pmin || 0}–${S.pmax >= 1000 ? '∞' : S.pmax} €`].filter(Boolean).join(' · '); $('#verdesc').checked = S.verdesc;
   $('#km').value = S.km; $('#kmv').textContent = S.km + ' km'; $('#orden').value = S.orden; $('#vend').checked = S.vend; $('#est-orden').value = S.eo;
 }
 const cambio = (k, v, que) => { S[k] = v; saveS(); syncControls(); renderTodo(que); };
@@ -1711,17 +1978,28 @@ $('#km').oninput = e => { S.km = +e.target.value; $('#kmv').textContent = S.km +
 $('#orden').onchange = e => cambio('orden', e.target.value, ['mapa']);
 $('#vend').onchange = e => cambio('vend', e.target.checked, ['mapa']);
 $('#verdesc').onchange = e => cambio('verdesc', e.target.checked, ['mapa']);
-$('#pmax').oninput = e => { S.pmax = +e.target.value; $('#pmaxv').textContent = S.pmax >= 1000 ? 'sin límite' : S.pmax + ' €'; saveS(); renderTodo(['mapa']); };
+if (innerWidth < 600) $('#filtros').open = false;   // en el móvil, plegados para que el mapa salga arriba
+function pintarPrecio() {
+  const a = S.pmin || 0, b = S.pmax;
+  $('#pmaxv').textContent = `${a} € – ${b >= 1000 ? 'sin límite' : b + ' €'}`;
+  $('#prango').style.left = a / 10 + '%'; $('#prango').style.right = (100 - b / 10) + '%';
+}
+['#pmin', '#pmax'].forEach(q => $(q).oninput = e => {
+  let a = +$('#pmin').value, b = +$('#pmax').value;
+  if (a > b - 20) { if (q === '#pmin') { a = b - 20; $('#pmin').value = a; } else { b = a + 20; $('#pmax').value = b; } }
+  S.pmin = Math.max(0, a); S.pmax = Math.min(1000, b); pintarPrecio(); saveS(); syncControls(); renderTodo(['mapa']);
+});
 $('#est-orden').onchange = e => cambio('eo', e.target.value, ['est']);
 $('#btn-nueva').onclick = () => { abrirCompra.pre = null; abrirCompra(null); };
 $$('[data-cerrar]').forEach(b => b.onclick = () => b.closest('dialog').close());
 
 document.addEventListener('click', async e => {
-  const t = e.target.closest('[data-fly],[data-copiar],[data-guardar],[data-quitar],[data-comprar],[data-vender],[data-texto],[data-editar],[data-descartar],[data-recuperar],[data-publicar],[data-check]');
+  const t = e.target.closest('[data-fly],[data-copiar],[data-guardar],[data-quitar],[data-comprar],[data-vender],[data-texto],[data-editar],[data-descartar],[data-recuperar],[data-publicar],[data-check],[data-ruta]');
   if (!t) return;
   const d = t.dataset;
   if (d.descartar) { e.preventDefault(); map && map.closePopup(); return descartar(d.descartar); }
   if (d.publicar) return abrirPub(registro.compras.find(x => x.id === d.publicar));
+  if (d.ruta) { const c = data.chollos.find(x => x.id === d.ruta) || info[d.ruta]?.ficha || (guardados.items || {})[d.ruta]; if (c) anadirRuta({ ...c, id: c.id || d.ruta }); return; }
   if (d.check) { const c = data.chollos.find(x => x.id === d.check) || (guardados.items || {})[d.check]?.wid && data.chollos.find(x => x.id === guardados.items[d.check].wid) || info[d.check]?.ficha || (guardados.items || {})[d.check]; if (c && c.venta) abrirCheck(c); else toast('Este anuncio aún no está analizado', true); return; }
   if (d.recuperar) return descartar(d.recuperar, true);
   if (d.fly) { select(d.fly); $('#map').scrollIntoView({ block: 'start' }); }

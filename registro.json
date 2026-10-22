@@ -39,6 +39,26 @@
    "fecha_venta": "",
    "url": "",
    "notas": ""
+  },
+  {
+   "id": "c1792621318131",
+   "quien": "Striker",
+   "creado_ms": 1792621318131,
+   "wid": null,
+   "venta_estimada": null,
+   "modelo": "iPhone 13 mini",
+   "capacidad": "128 GB",
+   "bateria": 81,
+   "estado": "listo",
+   "precio_compra": 125,
+   "fecha_compra": "2026-10-22",
+   "reparaciones": [],
+   "gasolina": 10,
+   "otros": null,
+   "precio_venta": null,
+   "fecha_venta": "",
+   "url": "",
+   "notas": ""
   }
  ],
  "movimientos": [

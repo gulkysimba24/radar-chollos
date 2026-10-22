@@ -358,7 +358,7 @@ def completar(a):
 def ficha_web(a, estado='activo'):
     d = a['eval']
     return {
-        'id': a['id'], 'familia': a['familia'], 'tipo': d['tipo'], 'nivel': d['nivel'], 'modelo': a['modelo'],
+        'id': a['id'], 'titulo': a.get('titulo', ''), 'familia': a['familia'], 'tipo': d['tipo'], 'nivel': d['nivel'], 'modelo': a['modelo'],
         'capacidad': a.get('capacidad'), 'precio': a['precio'], 'oferta': d['oferta'], 'max': d['max_pagar'],
         'venta': d['venta'], 'beneficio': d['beneficio_oferta'], 'reparacion': d['reparacion'],
         'zona': a.get('zona'), 'km': a.get('km'), 'lat': a.get('lat'), 'lng': a.get('lng'), 'url': a['url'],

@@ -373,6 +373,7 @@ dialog .df .btn { flex: 1; }
       <div class="row">
         <label for="km">Hasta <b id="kmv">60 km</b> <input type="range" id="km" min="5" max="60" step="5" value="60"></label>
         <label for="orden">Ordenar <select id="orden"><option value="beneficio">Más beneficio</option><option value="km">Más cerca</option><option value="nuevo">Más nuevos</option><option value="rapido">Se venden antes</option></select></label>
+        <label class="edad">🕒 Publicados <select id="edad" aria-label="Antigüedad del anuncio"><option value="12">últimas 12 h</option><option value="24">últimas 24 h</option><option value="72">últimos 3 días</option><option value="168">últimos 7 días</option><option value="720">último mes</option></select></label>
         <label>Precio <b id="pmaxv">0–1000 €</b> <span class="rango2"><span class="pista"><i id="prango"></i></span><input type="range" id="pmin" min="0" max="1000" step="10" value="0" aria-label="Precio mínimo"><input type="range" id="pmax" min="0" max="1000" step="10" value="1000" aria-label="Precio máximo"></span></label>
         <label for="vend"><input type="checkbox" id="vend"> Ver vendidos</label>
         <label for="verdesc"><input type="checkbox" id="verdesc"> Ver descartados (<span id="ndesc">0</span>)</label>
@@ -772,7 +773,7 @@ async function cambiar(path, defecto, fn, mensaje) {
 // ------------------------------------------------------------------ datos
 let data = { chollos: [] }, estudio = {}, info = {}, guardados = { items: {} }, registro = { compras: [] };
 let homeLL = [40.2842, -3.7942], map, layer;
-const S = Object.assign({ fam: 'todos', tipo: 'todos', niv: 'todos', km: 60, pmin: 0, pmax: 1000, verdesc: false, orden: 'beneficio', vend: false, tab: 'mapa', rf: 'todos', et: 'listo', eo: 'vendidos' }, leer('radar-f3', {}));
+const S = Object.assign({ fam: 'todos', tipo: 'todos', niv: 'todos', km: 60, pmin: 0, pmax: 1000, edad: 72, verdesc: false, orden: 'beneficio', vend: false, tab: 'mapa', rf: 'todos', et: 'listo', eo: 'vendidos' }, leer('radar-f3', {}));
 S.sel = '';
 const saveS = () => escribir('radar-f3', { fam: S.fam, tipo: S.tipo, niv: S.niv, km: S.km, pmin: S.pmin, pmax: S.pmax, verdesc: S.verdesc, orden: S.orden, vend: S.vend, tab: S.tab, rf: S.rf, et: S.et, eo: S.eo });
 
@@ -820,9 +821,12 @@ function maps(c) { return 'https://www.google.com/maps/dir/?api=1&origin=' + enc
 let descartados = { items: {} };
 const DESC_LOCAL = new Set(leer('radar-descartados', []));
 const descartado = id => !!(descartados.items || {})[id] || DESC_LOCAL.has(id);
+const PIEZAS = /chasis|carcasa|despiece|para piezas|solo piezas|placa base|\bplaca\b|pantalla (sola|original|repuesto)|^(tapa|marco|bandeja|flex|lente|cristal|repuesto)\b/i;
 function base() {
   return data.chollos.filter(c => (S.fam === 'todos' || c.familia === S.fam) && (S.tipo === 'todos' || c.tipo === S.tipo)
     && (c.km == null || c.km <= S.km) && c.precio >= (S.pmin || 0) && (S.pmax >= 1000 || c.precio <= S.pmax)
+    && (!c.publicado_ms || c.publicado_ms >= Date.now() - (S.edad || 72) * 3600000)
+    && !PIEZAS.test(c.titulo || '')
     && (S.vend || c.estado !== 'vendido') && (S.verdesc || !descartado(c.id)));
 }
 async function descartar(id, deshacer) {
@@ -1963,9 +1967,10 @@ function syncControls() {
   $$('[data-niv]').forEach(b => b.setAttribute('aria-pressed', b.dataset.niv === S.niv));
   $$('[data-rf]').forEach(b => b.setAttribute('aria-pressed', b.dataset.rf === S.rf));
   $$('[data-et]').forEach(b => b.setAttribute('aria-pressed', b.dataset.et === S.et));
+  $('#edad').value = String(S.edad || 72);
   $('#pmin').value = S.pmin || 0; $('#pmax').value = S.pmax; pintarPrecio();
   $('#filtros-res').textContent = [S.fam !== 'todos' ? (S.fam === 'iphone' ? 'iPhone' : 'Android') : '', S.tipo !== 'todos' ? (S.tipo === 'listo' ? 'Listos' : 'A reparar') : '',
-    S.km + ' km', `${S.pmin || 0}–${S.pmax >= 1000 ? '∞' : S.pmax} €`].filter(Boolean).join(' · '); $('#verdesc').checked = S.verdesc;
+    {12: '12 h', 24: '24 h', 72: '3 días', 168: '7 días', 720: '1 mes'}[S.edad || 72], S.km + ' km', `${S.pmin || 0}–${S.pmax >= 1000 ? '∞' : S.pmax} €`].filter(Boolean).join(' · '); $('#verdesc').checked = S.verdesc;
   $('#km').value = S.km; $('#kmv').textContent = S.km + ' km'; $('#orden').value = S.orden; $('#vend').checked = S.vend; $('#est-orden').value = S.eo;
 }
 const cambio = (k, v, que) => { S[k] = v; saveS(); syncControls(); renderTodo(que); };
@@ -1984,6 +1989,7 @@ function pintarPrecio() {
   $('#pmaxv').textContent = `${a} € – ${b >= 1000 ? 'sin límite' : b + ' €'}`;
   $('#prango').style.left = a / 10 + '%'; $('#prango').style.right = (100 - b / 10) + '%';
 }
+$('#edad').onchange = e => { S.edad = +e.target.value; saveS(); syncControls(); renderTodo(['mapa']); };
 ['#pmin', '#pmax'].forEach(q => $(q).oninput = e => {
   let a = +$('#pmin').value, b = +$('#pmax').value;
   if (a > b - 20) { if (q === '#pmin') { a = b - 20; $('#pmin').value = a; } else { b = a + 20; $('#pmax').value = b; } }

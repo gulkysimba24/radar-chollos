@@ -81,7 +81,8 @@ def bateria(texto):
 
 
 # ---------------------------------------------------------------- estado / avería
-_ACCESORIO = re.compile(r'^(funda|carcasa|protector|cristal templado|cargador|cable|pantalla|repuesto|bater[ií]a|tapa|c[aá]mara|lote|caja)\b|'
+_ACCESORIO = re.compile(r'^(funda|carcasa|protector|cristal templado|cargador|cable|pantalla|repuesto|bater[ií]a|tapa|c[aá]mara|lote|caja|marco|bandeja|flex|lente|placa)\b|'
+                        r'\b(chasis|despiece|para piezas|solo piezas|placa base|sin placa|carcasa (completa|trasera|original)|pantalla (sola|original|repuesto))\b|'
                         r'\b(busco|compro|cambio por|solo cambio|reparaci[oó]n de|reparamos|servicio t[eé]cnico|cambio de pantalla)\b', re.I)
 _NEG = re.compile(r'(sin|no|ni|ningun[ao]?|nunca|cero|nada de)\s+(\S+\s+){0,3}$', re.I)
 _GRAVE = {

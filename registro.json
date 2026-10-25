@@ -63,7 +63,12 @@
    "precio_venta": null,
    "fecha_venta": "",
    "url": "",
-   "notas": ""
+   "notas": "",
+   "publicado": {
+    "precio": 215,
+    "url": "https://wallapop.com/item/iphone-13-128gb-azul-1316663378?utm_medium=AppShare&utm_source=ShareItem",
+    "fecha": "2026-10-25"
+   }
   }
  ],
  "movimientos": [

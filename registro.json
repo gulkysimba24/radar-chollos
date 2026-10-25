@@ -89,6 +89,15 @@
    "categoria": "Gasolina y transporte",
    "fecha": "2026-10-22",
    "pagado": "caja"
+  },
+  {
+   "id": "g1792886813818",
+   "quien": "Gulky",
+   "importe": 10,
+   "concepto": "Comida",
+   "categoria": "Accesorios (fundas, cables…)",
+   "fecha": "2026-10-25",
+   "pagado": "caja"
   }
  ]
 }

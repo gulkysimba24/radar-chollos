@@ -44,6 +44,26 @@
     "url": "https://wallapop.com/item/iphone-13-mini-128gb-azul-1315925309?utm_medium=AppShare&utm_source=ShareItem",
     "fecha": "2026-10-23"
    }
+  },
+  {
+   "id": "c1792886892263",
+   "quien": "Striker",
+   "creado_ms": 1792886892263,
+   "wid": null,
+   "venta_estimada": null,
+   "modelo": "iPhone 13",
+   "capacidad": "256",
+   "bateria": 77,
+   "estado": "listo",
+   "precio_compra": 150,
+   "fecha_compra": "2026-10-23",
+   "reparaciones": [],
+   "gasolina": 20,
+   "otros": 0,
+   "precio_venta": null,
+   "fecha_venta": "",
+   "url": "",
+   "notas": ""
   }
  ],
  "movimientos": [

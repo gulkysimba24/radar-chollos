@@ -139,6 +139,14 @@
    "importe": 400,
    "fecha": "2026-10-27",
    "nota": "Prestamo"
+  },
+  {
+   "id": "m1793114459825",
+   "quien": "Striker",
+   "tipo": "aporte",
+   "importe": 400,
+   "fecha": "2026-10-27",
+   "nota": "Prestamo"
   }
  ],
  "meses": {

@@ -389,6 +389,8 @@ def no_es_movil(a, d=None):
     p, venta = a.get('precio') or 0, d.get('venta') or 0
     if p < 60 or analisis.es_accesorio(a.get('titulo') or '') or _NO_MOVIL.search(f"{a.get('titulo') or ''} {a.get('descripcion') or ''}"):
         return True
+    if analisis.estado(a.get('titulo') or '', a.get('descripcion') or '')['grave']:
+        return True                       # bloqueado, iCloud, placa...: se vuelve a mirar con las reglas nuevas
     return d.get('tipo') == 'listo' and venta and p < venta * 0.50
 
 
@@ -741,7 +743,8 @@ def resumen_diario(activos, seguidos_ventas, registro, est, temas):
     vivos = [a for a in activos.values() if a.get('estado', 'activo') == 'activo'
              and a['avisado_ms'] >= ahora_ms() - config.DIAS_ACTIVO * 86400000 and interesa(a)]
     hoy_av = [a for a in vivos if a['avisado_ms'] >= inicio_dia]
-    buenos = sorted([a for a in vivos if a['eval'].get('categoria') != 'trampa'], key=lambda a: -a['eval']['beneficio_oferta'])[:5]
+    buenos = sorted([a for a in vivos if a['eval'].get('categoria') != 'trampa' and a['eval'].get('tipo') == 'listo'
+                     and not a['eval'].get('defectos')], key=lambda a: -a['eval']['beneficio_oferta'])[:5]
     l = [f"🌙 <b>Resumen del día · {hoy.strftime('%d/%m')}</b>", '',
          f"Hoy: <b>{len(hoy_av)}</b> avisos nuevos ({sum(a['eval'].get('categoria') == 'chollazo' for a in hoy_av)} chollazos). "
          f"Siguen a la venta <b>{len(vivos)}</b>."]

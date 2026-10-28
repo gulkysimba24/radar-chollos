@@ -121,9 +121,22 @@ _DEFECTOS = {
     'micrófono o auricular': (r'(micro|micr[oó]fono|auricular).{0,20}(no|falla|mal)|no (me )?(oyen|escuchan)', 0.88),
     'wifi, bluetooth o cobertura': (r'(wifi|wi-fi|bluetooth|cobertura|se[ñn]al|sim).{0,20}(no|falla|mal)|sin cobertura|no coge (la )?(sim|se[ñn]al)', 0.75),
     'sensor de proximidad': (r'(sensor|proximidad).{0,20}(no|falla|mal)', 0.90),
+    'operador bloqueado / no liberado': (r'_OPERADOR_', 0.72),
+    'solo eSIM o modelo de fuera': (r'solo (funciona con )?e-?sim|sin (bandeja|ranura)( de)? sim|modelo (americano|usa|de (ee\.? ?uu|estados unidos|china|jap[oó]n))|versi[oó]n (americana|usa)', 0.85),
+    'se reinicia, apaga o calienta': (r'se (reinicia|apaga|bloquea|calienta|cuelga)|reinicios|calienta (mucho|bastante)', 0.70),
+    'se mojó o tuvo humedad': (r'mojad|humedad|agua dentro|se (me )?cay[oó] al agua|ba[ñn]era|piscina|oxidad', 0.70),
+    'no lee la SIM o no llama': (r'no (lee|reconoce|detecta) (la )?sim|no (recibe|hace|deja hacer) llamadas|sin servicio|no tiene (se[ñn]al|servicio)', 0.70),
+    'reparado antes o abierto': (r'(ha sido|fue|est[aá]) (reparad|abiert)|cambiad[ao] (la )?(bater|pantalla|tapa|carcasa)|pieza (cambiada|sustituida)|tapa no original', 0.90),
+    'batería hinchada': (r'bater[ií]a (hinchad|abombad|inflad)|pantalla (levantad|despegad)', 0.70),
     'golpes o muchos arañazos': (r'(much[oa]s|bastantes|varios|fuertes?) (ara[ñn]az|rayas|golpes|marcas)|muy (rayad|golpead|usad|marcad)|golpe (en|fuerte)|abollad|esquinas? (golpead|tocad)|doblad', 0.88),
 }
+_OPERADOR = (r'(bloquead[oa]|bloqueo|capado) (a|al|por|para|de|con) (el |la )?(operador|operadora|compa[ñn][ií]a|movistar|vodafone|orange|yoigo|o2|digi|lowi|simyo|pepephone|masm[oó]vil|jazztel|at&t|verizon|t-?mobile)|'
+             r'(operador|operadora|compa[ñn][ií]a) bloquead|no (est[aá] |es )?liberad|sin liberar|hay que liberar|'
+             r'(solo|s[oó]lo) (funciona|vale|va|sirve|acepta|admite) (con|para) (sim de )?(movistar|vodafone|orange|yoigo|o2|digi|lowi|simyo|pepephone|masm[oó]vil|jazztel|una compa)|'
+             r'(es|era) de (movistar|vodafone|orange|yoigo|at&t|verizon|t-?mobile) (y )?(no|bloq)')
+_DEFECTOS['operador bloqueado / no liberado'] = (_OPERADOR, _DEFECTOS['operador bloqueado / no liberado'][1])
 _DEFECTOS = {k: (re.compile(v, re.I), f) for k, (v, f) in _DEFECTOS.items()}
+_OPERADOR_RX = _DEFECTOS['operador bloqueado / no liberado'][0]
 _ROTO_GENERICO = re.compile(r'\brot[oa]s?\b|grieta|rajad|golpe fuerte', re.I)
 _MARCAS = re.compile(r'rayas?|rayad|rasgu[ñn]|golpes?|marcas de uso|desconchad|ara[ñn]az|rozad|desgast|piquete|picotaz|muesca|desportill', re.I)
 _DEJO = re.compile(r'(?:te\s+lo\s+dejo|lo\s+dejo|se\s+lo\s+dejo|lo\s+vendo|te\s+lo\s+vendo|precio\s+final)\s+(?:en|a|por)\s+(\d{2,4})|'
@@ -149,8 +162,9 @@ _GRAVE_LITERAL = re.compile(r'no (est[aá] |es )?libre de (icloud|cuenta)|no (ti
 def estado(titulo, descripcion):
     """{'grave': motivo|None, 'averias': [...], 'extras': [...], 'marcas': bool, 'roto_sin_precisar': bool}"""
     texto = f'{titulo}. {descripcion}'
-    grave = 'bloqueado o con cuenta' if _GRAVE_LITERAL.search(texto) else None
-    grave = grave or next((k for k, rx in _GRAVE.items() if _hay(rx, texto)), None)
+    sin_op = _OPERADOR_RX.sub(' ', texto)           # «bloqueado por Movistar» se vende igual (más barato); iCloud no
+    grave = 'bloqueado o con cuenta' if _GRAVE_LITERAL.search(sin_op) else None
+    grave = grave or next((k for k, rx in _GRAVE.items() if _hay(rx, sin_op)), None)
     averias = [k for k, rx in _AVERIAS.items() if _hay(rx, texto)]
     extras = [k for k, rx in _EXTRAS.items() if _hay(rx, texto)]
     roto = not averias and not extras and _hay(_ROTO_GENERICO, texto)

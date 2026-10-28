@@ -387,9 +387,14 @@ def no_es_movil(a, d=None):
     """Fundas, carcasas, chasis o precios imposibles: no es un móvil para comprar."""
     d = d or a.get('eval') or {}
     p, venta = a.get('precio') or 0, d.get('venta') or 0
-    if p < 60 or analisis.es_accesorio(a.get('titulo') or ''):
+    if p < 60 or analisis.es_accesorio(a.get('titulo') or '') or _NO_MOVIL.search(f"{a.get('titulo') or ''} {a.get('descripcion') or ''}"):
         return True
-    return d.get('tipo') == 'listo' and venta and p < venta * 0.40
+    return d.get('tipo') == 'listo' and venta and p < venta * 0.50
+
+
+_NO_MOVIL = re.compile(r'chasis|despiece|para piezas|solo piezas|placa base|sin placa|maqueta|dummy|r[eé]plica|imitaci[oó]n|clon\b|'
+                       r'(es|vendo|solo|s[oó]lo) (la |el )?(carcasa|funda|caja|chasis|pantalla|tapa)\b|no es (un|el) (m[oó]vil|tel[eé]fono|iphone)|'
+                       r'sin (m[oó]vil|tel[eé]fono|iphone)\b', re.I)
 
 
 def interesa(a, d=None):
@@ -734,7 +739,7 @@ def resumen_diario(activos, seguidos_ventas, registro, est, temas):
     e = html.escape
     inicio_dia = int(hoy.replace(hour=0, minute=0, second=0, microsecond=0).timestamp() * 1000)
     vivos = [a for a in activos.values() if a.get('estado', 'activo') == 'activo'
-             and a['avisado_ms'] >= ahora_ms() - config.DIAS_ACTIVO * 86400000]
+             and a['avisado_ms'] >= ahora_ms() - config.DIAS_ACTIVO * 86400000 and interesa(a)]
     hoy_av = [a for a in vivos if a['avisado_ms'] >= inicio_dia]
     buenos = sorted([a for a in vivos if a['eval'].get('categoria') != 'trampa'], key=lambda a: -a['eval']['beneficio_oferta'])[:5]
     l = [f"🌙 <b>Resumen del día · {hoy.strftime('%d/%m')}</b>", '',
@@ -981,7 +986,7 @@ def ejecutar():
     global VENTAS
     precios = cargar('precios.json', {})
     vistos = cargar('vistos.json', {})
-    activos = cargar('activos.json', {})
+    activos = {k: v for k, v in cargar('activos.json', {}).items() if not no_es_movil(v)}   # fuera carcasas y chasis ya avisados
     vigilar = cargar('vigilar.json', {})
     seguidos = cargar('mercado.json', {})
     VENTAS = cargar('ventas.json', [])

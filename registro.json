@@ -60,8 +60,8 @@
    "reparaciones": [],
    "gasolina": 20,
    "otros": 0,
-   "precio_venta": null,
-   "fecha_venta": "",
+   "precio_venta": 215,
+   "fecha_venta": "2026-10-29",
    "url": "",
    "notas": "",
    "publicado": {

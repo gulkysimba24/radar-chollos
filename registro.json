@@ -119,6 +119,26 @@
     "url": "https://es.wallapop.com/item/iphone-16-pro-128gb-1318089616?utm_medium=AppShare&utm_source=ShareItem",
     "fecha": "2026-10-28"
    }
+  },
+  {
+   "id": "c1793303137759",
+   "quien": "Gulkysimba",
+   "creado_ms": 1793303137759,
+   "wid": null,
+   "venta_estimada": null,
+   "modelo": "iPhone 14 Plus",
+   "capacidad": "128 GB",
+   "bateria": 79,
+   "estado": "listo",
+   "precio_compra": 210,
+   "fecha_compra": "2026-10-29",
+   "reparaciones": [],
+   "gasolina": 5,
+   "otros": null,
+   "precio_venta": null,
+   "fecha_venta": "",
+   "url": "",
+   "notas": ""
   }
  ],
  "movimientos": [

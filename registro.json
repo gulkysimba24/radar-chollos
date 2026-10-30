@@ -138,7 +138,12 @@
    "precio_venta": null,
    "fecha_venta": "",
    "url": "",
-   "notas": ""
+   "notas": "",
+   "publicado": {
+    "precio": 280,
+    "url": "https://wallapop.com/item/iphone-14-plus-azul-marino-1318805942?utm_medium=AppShare&utm_source=ShareItem",
+    "fecha": "2026-10-30"
+   }
   }
  ],
  "movimientos": [

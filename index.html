@@ -1635,6 +1635,7 @@ function seguimientoHTML(c) {
   const s = SEG[c.id]; if (!s || vendida(c)) return '';
   const mi = num(c.publicado?.precio);
   const partes = [];
+  if (s.chats != null) partes.push(`💬 <b>${s.chats}</b> chats · 👀 ${s.visitas || 0} visitas · ❤️ ${s.favoritos || 0}`);
   if (s.competencia) partes.push(`Hay <b>${s.competencia}</b> iguales a la venta (el más barato a ${eur(s.mas_barato)})`);
   if (s.recomendado) partes.push(`precio normal <b>~${eur(s.recomendado)}</b>, para venderlo rápido <b>~${eur(s.rapido)}</b>`);
   let aviso = '';

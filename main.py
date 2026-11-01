@@ -915,11 +915,21 @@ def seguimiento(registro, seguidos, precios, temas):
                   'recomendado': analisis._r5(normal) if normal else None, 'rapido': analisis._r5(rapido) if rapido else None,
                   'fuente': fuente, 'dias': dias, 'coste': round(finanzas.coste(c)), 'revisado_ms': ahora_ms()})
         # ¿se ha vendido nuestro anuncio?
-        if pub.get('url') and ahora_ms() - s.get('anuncio_ms', 0) > 2 * 3600000:
+        if pub.get('url') and ahora_ms() - s.get('anuncio_ms', 0) > 10 * 60000:
             s['anuncio_ms'] = ahora_ms()
             wid = s.get('wid') or id_de_enlace(pub['url'])
             s['wid'] = wid
             det = detalle(wid) if wid else 'error'
+            if isinstance(det, dict) and det.get('counters'):
+                cn = det['counters']
+                chats, antes = cn.get('conversations') or 0, s.get('chats')
+                s.update({'chats': chats, 'visitas': cn.get('views') or 0, 'favoritos': cn.get('favorites') or 0})
+                if antes is not None and chats > antes:
+                    nuevos = chats - antes
+                    telegram.enviar(f"💬 <b>{'Nuevo chat' if nuevos == 1 else f'{nuevos} chats nuevos'}</b> en vuestro <b>{e(modelo)}</b>"
+                                    f" ({mi:.0f} €)\nAhora: {chats} chats · 👀 {s['visitas']} visitas · ❤️ {s['favoritos']}" if mi else
+                                    f"💬 Nuevo chat en vuestro <b>{e(modelo)}</b> · ahora {chats} chats",
+                                    temas.get('equipo'), [[{'text': '📱 Ver anuncio', 'url': pub['url']}]], clave='equipo')
             if (det is None or (isinstance(det, dict) and wallapop.flag(det.get('sold')))) and not s.get('avisado_vendido'):
                 s['avisado_vendido'] = True
                 telegram.enviar(f"🤔 Vuestro anuncio del <b>{e(modelo)}</b> ya no está a la venta. ¿Lo habéis vendido? "

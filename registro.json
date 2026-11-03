@@ -266,5 +266,18 @@
    "fecha": "2026-10-25",
    "pagado": "caja"
   }
- ]
+ ],
+ "va": {
+  "productos": [
+   {
+    "id": "pmw15cfhwjxo",
+    "nombre": "Vaper Sex Beach",
+    "foto": "va/pmw15cfhwjxo-mw15cfij.jpg",
+    "pvp": 11,
+    "nota": ""
+   }
+  ],
+  "cajas": [],
+  "ventas": []
+ }
 }

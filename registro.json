@@ -250,7 +250,7 @@
  "gastos": [
   {
    "id": "g1792640791915",
-   "quien": "Gulky",
+   "quien": "Conjunta",
    "importe": 5,
    "concepto": "Comida",
    "categoria": "Gasolina y transporte",
@@ -259,7 +259,7 @@
   },
   {
    "id": "g1792886813818",
-   "quien": "Gulky",
+   "quien": "Conjunta",
    "importe": 10,
    "concepto": "Comida",
    "categoria": "Accesorios (fundas, cables…)",
@@ -355,7 +355,7 @@
     "precio": 70,
     "unidades": 10,
     "fecha": "2026-11-03",
-    "quien": "Gulky",
+    "quien": "Conjunta",
     "total": 70
    },
    {
@@ -365,7 +365,7 @@
     "precio": 70,
     "unidades": 10,
     "fecha": "2026-11-03",
-    "quien": "Gulky",
+    "quien": "Conjunta",
     "total": 70
    },
    {
@@ -375,7 +375,7 @@
     "precio": 70,
     "unidades": 10,
     "fecha": "2026-11-03",
-    "quien": "Gulky",
+    "quien": "Conjunta",
     "total": 70
    },
    {
@@ -385,7 +385,7 @@
     "precio": 70,
     "unidades": 10,
     "fecha": "2026-11-03",
-    "quien": "Gulky",
+    "quien": "Conjunta",
     "total": 70
    },
    {
@@ -395,7 +395,7 @@
     "precio": 70,
     "unidades": 10,
     "fecha": "2026-11-03",
-    "quien": "Gulky",
+    "quien": "Conjunta",
     "total": 70
    },
    {
@@ -405,7 +405,7 @@
     "precio": 70,
     "unidades": 10,
     "fecha": "2026-11-03",
-    "quien": "Gulky",
+    "quien": "Conjunta",
     "total": 70
    },
    {
@@ -415,7 +415,7 @@
     "precio": 70,
     "unidades": 10,
     "fecha": "2026-11-03",
-    "quien": "Gulky",
+    "quien": "Conjunta",
     "total": 70
    },
    {
@@ -425,7 +425,7 @@
     "precio": 70,
     "unidades": 10,
     "fecha": "2026-11-03",
-    "quien": "Gulky",
+    "quien": "Conjunta",
     "total": 70
    },
    {
@@ -435,7 +435,7 @@
     "precio": 70,
     "unidades": 10,
     "fecha": "2026-11-03",
-    "quien": "Gulky",
+    "quien": "Conjunta",
     "total": 70
    },
    {
@@ -445,10 +445,23 @@
     "precio": 70,
     "unidades": 10,
     "fecha": "2026-11-03",
-    "quien": "Gulky",
+    "quien": "Conjunta",
     "total": 70
    }
   ],
   "ventas": []
- }
+ },
+ "plazos": [
+  {
+   "id": "pl1793740814433",
+   "concepto": "10 Cajas Vapers",
+   "fecha": "2026-11-03",
+   "pagos": [
+    {
+     "fecha": "2026-11-03",
+     "importe": 324
+    }
+   ]
+  }
+ ]
 }

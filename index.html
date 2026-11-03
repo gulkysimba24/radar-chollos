@@ -490,6 +490,7 @@ dialog .df .btn { flex: 1; }
       <button class="btn" type="button" id="va-btn-caja" style="border-color:var(--ofrece);color:var(--ofrece)">📦 Comprar cajas</button>
       <button class="btn" type="button" id="va-btn-prod">＋ Nuevo sabor</button>
     </div>
+    <button class="btn" type="button" id="va-btn-gasto" style="width:100%;margin:-6px 0 14px;border-color:var(--ofrece);color:var(--ofrece)">🧾 Apuntar otro gasto de VA (envíos, bolsas, hielo…)</button>
     <h2>Sabores y stock</h2>
     <div class="va-grid" id="va-prods"></div>
     <h2 style="margin-top:22px">Cómo nos va</h2>
@@ -653,6 +654,7 @@ dialog .df .btn { flex: 1; }
         <label>¿Quién?<select name="quien" style="width:100%;min-height:42px;background:var(--bg)"></select></label>
         <label>Importe (€)<input type="number" name="importe" min="0" step="0.01" inputmode="decimal" required></label>
       </div>
+      <label>¿De qué negocio?<select name="negocio" style="width:100%;min-height:42px;background:var(--bg)"><option value="moviles">📱 Móviles</option><option value="va">🥤 VA (bebidas)</option></select></label>
       <label>¿En qué?<input type="text" name="concepto" maxlength="80" placeholder="Ej.: 3 fundas y protectores" required></label>
       <div class="dos">
         <label>Tipo<select name="categoria" style="width:100%;min-height:42px;background:var(--bg)">
@@ -1830,26 +1832,26 @@ function renderGastos() {
   $('#gastos-tiles').innerHTML = `<div class="tile ambar"><b>${eur2(tot)}</b><span>Gastos en total</span></div><div class="tile ambar"><b>${eur2(delMes)}</b><span>Este mes</span></div>`
     + socios().map(q => `<div class="tile"><b>${eur2(porQ[q] || 0)}</b><span>Ha gastado ${esc(q)}</span></div>`).join('');
   $('#l-gastos').innerHTML = gs.length ? gs.slice(0, 60).map(g => `<div class="venta-row" data-gasto="${esc(g.id)}" style="cursor:pointer"><div>
-      <b>${esc(g.concepto || g.categoria || 'Gasto')}</b><div class="d">${esc(fecha(g.fecha))} · ${esc(g.quien || '')} · ${esc(g.categoria || '')}${g.pagado === 'bolsillo' ? ' · de su bolsillo' : ''}</div></div>
+      <b>${g.negocio === 'va' ? '🥤 ' : ''}${esc(g.concepto || g.categoria || 'Gasto')}</b><div class="d">${esc(fecha(g.fecha))} · ${esc(g.quien || '')} · ${esc(g.categoria || '')}${g.pagado === 'bolsillo' ? ' · de su bolsillo' : ''}</div></div>
       <div class="p">${eur2(num(g.importe) || 0)}</div></div>`).join('')
     : '<div class="empty">Aún no habéis apuntado gastos.</div>';
   $$('[data-gasto]').forEach(el => el.onclick = () => abrirGasto(gs.find(g => g.id === el.dataset.gasto)));
 }
-let gastoEdit = null;
+let gastoEdit = null, gastoNegocio = null;
 function abrirGasto(g) {
   gastoEdit = g || null;
   const f = $('#f-gasto'); f.reset();
   f.quien.innerHTML = socios().map(q => `<option>${esc(q)}</option>`).join('');
   f.quien.value = g?.quien || yoSocio() || socios()[0];
   f.importe.value = g?.importe ?? ''; f.concepto.value = g?.concepto || ''; f.fecha.value = g?.fecha || hoyISO();
-  if (g?.categoria) f.categoria.value = g.categoria; f.pagado.value = g?.pagado || 'caja';
+  if (g?.categoria) f.categoria.value = g.categoria; f.pagado.value = g?.pagado || 'caja'; f.negocio.value = g?.negocio || gastoNegocio || 'moviles'; gastoNegocio = null;
   $('#dg-t').textContent = g ? 'Editar gasto' : 'Apuntar gasto'; $('#dg-borrar').hidden = !g;
   $('#d-gasto').showModal();
 }
 $('#btn-gasto').onclick = () => abrirGasto();
 $('#f-gasto').addEventListener('submit', async e => {
   if (e.submitter?.value !== 'ok') return; e.preventDefault();
-  const f = e.target, g = { id: gastoEdit?.id || 'g' + Date.now(), quien: f.quien.value, importe: num(f.importe.value), concepto: f.concepto.value.trim(), categoria: f.categoria.value, fecha: f.fecha.value, pagado: f.pagado.value };
+  const f = e.target, g = { id: gastoEdit?.id || 'g' + Date.now(), quien: f.quien.value, importe: num(f.importe.value), concepto: f.concepto.value.trim(), categoria: f.categoria.value, fecha: f.fecha.value, pagado: f.pagado.value, negocio: f.negocio.value };
   if (!g.importe) { toast('Pon el importe', true); return; }
   if (await guardarReg(j => { j.gastos = (j.gastos || []).filter(x => x.id !== g.id); j.gastos.push(g); }, `Gasto: ${g.concepto} ${g.importe} € (${g.quien})`, '🧾 Gasto apuntado')) $('#d-gasto').close();
 });
@@ -1880,10 +1882,13 @@ function vaCuentas() {
 }
 function renderVA() {
   const V = registro.va || {}, c = vaCuentas(), fin = finResumen();
+  const gVA = (registro.gastos || []).filter(g => g.negocio === 'va'), gastVA = gVA.reduce((s, g) => s + (num(g.importe) || 0), 0), neto = c.beneficio - gastVA;
   $('#badge-va').hidden = !c.res; $('#badge-va').textContent = c.res;
-  $('#va-tiles').innerHTML = `<div class="tile verde"><b>${signo(Math.round(c.beneficio))}</b><span>Beneficio VA</span></div>
+  $('#va-tiles').innerHTML = `<div class="tile verde"><b>${signo(Math.round(neto))}</b><span>Beneficio VA (con gastos)</span></div>
     <div class="tile azul"><b>${eur(c.ingresado)}</b><span>Vendido (${c.vend} uds.)</span></div>
-    <div class="tile ambar"><b>${eur(c.invertido)}</b><span>Invertido en cajas</span></div>
+    <div class="tile ambar"><b>${eur(c.invertido)}</b><span>Gastado en cajas</span></div>
+    <div class="tile ambar"><b>${eur(gastVA)}</b><span>Otros gastos VA</span></div>
+    <div class="tile"><b>${eur(c.invertido + gastVA)}</b><span>Total invertido en VA</span></div>
     <div class="tile"><b>${c.uds - c.res}</b><span>Uds. libres · ${c.res} reservadas</span></div>
     <div class="tile ambar"><b>${eur(c.reservado)}</b><span>Reservado sin cobrar</span></div>
     <div class="tile"><b>${fin ? eur(fin.caja) : '—'}</b><span>Caja común (móviles + VA)</span></div>`;
@@ -2020,6 +2025,7 @@ $('#dvv-borrar').onclick = async () => {
   if (await guardarReg(j => { vaVa(j).ventas = j.va.ventas.filter(y => y.id !== id); }, 'VA: borrar venta', 'Borrado')) $('#d-va-venta').close();
 };
 $('#va-btn-prod').onclick = () => vaAbrirProd();
+$('#va-btn-gasto').onclick = () => { gastoNegocio = 'va'; abrirGasto(); };
 $('#va-btn-caja').onclick = () => vaAbrirCaja();
 $('#va-btn-venta').onclick = () => vaAbrirVenta();
 

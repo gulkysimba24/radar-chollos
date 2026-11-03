@@ -347,7 +347,18 @@
     "nota": ""
    }
   ],
-  "cajas": [],
+  "cajas": [
+   {
+    "id": "kmw16nj881ed",
+    "producto": "pmw15cfhwjxo",
+    "cajas": 1,
+    "precio": 70,
+    "unidades": 10,
+    "fecha": "2026-11-03",
+    "quien": "Gulky",
+    "total": 70
+   }
+  ],
   "ventas": []
  }
 }

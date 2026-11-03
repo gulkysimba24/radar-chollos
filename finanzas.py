@@ -42,11 +42,13 @@ def resumen(registro):
     ingresado = sum(_n(c['precio_venta']) for c in compras if vendida(c))
     stock = [c for c in compras if not vendida(c)]
     v = va(registro)
-    caja = aportado - gastado + ingresado - v['invertido'] + v['ingresado']
+    hoy = date.today().isoformat()
+    deuda = sum(_n(x.get('importe')) for pl in registro.get('plazos') or [] for x in pl.get('pagos') or [] if (x.get('fecha') or '') > hoy)
+    caja = aportado - gastado + ingresado - v['invertido'] + v['ingresado'] + deuda     # lo que falta por pagar a plazos sigue en la caja
     en_stock = sum(coste(c) for c in stock) + v['valor_stock']
     extra = _n((registro.get('ajustes') or {}).get('extra'))
     return {'caja': round(caja, 2), 'aportado': round(aportado, 2), 'en_stock': round(en_stock, 2),
-            'total': round(caja + en_stock, 2), 'extra': extra, 'disponible': round(caja + extra, 2),
+            'total': round(caja + en_stock - deuda, 2), 'deuda': round(deuda, 2), 'extra': extra, 'disponible': round(caja + extra, 2),
             'gastos': round(sum(_n(g.get('importe')) for g in gastos), 2),
             'beneficio': round(sum(_n(c['precio_venta']) - coste(c) for c in compras if vendida(c)) - sum(_n(g.get('importe')) for g in gastos)
                                + v['beneficio'], 2)}

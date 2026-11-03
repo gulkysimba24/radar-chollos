@@ -466,6 +466,11 @@ dialog .df .btn { flex: 1; }
     <div class="tiles t2" id="gastos-tiles"></div>
     <button class="btn grande" type="button" id="btn-gasto" style="border-color:var(--ofrece);color:var(--ofrece)">＋ Apuntar un gasto</button>
     <div class="list" id="l-gastos" style="margin-top:12px"></div>
+    <h2 style="margin-top:22px">💳 Pagos a plazos (Klarna…)</h2>
+    <p class="sub">Si pagáis algo a plazos, apuntad la compra con su precio entero y aquí los plazos que faltan. La caja solo resta cada plazo el día que se cobra.</p>
+    <div id="plazos-res"></div>
+    <button class="btn grande" type="button" id="btn-plazos" style="border-color:var(--normal);color:var(--normal)">＋ Apuntar pago a plazos</button>
+    <div class="list" id="l-plazos" style="margin-top:12px"></div>
     <h2 style="margin-top:22px">Compras y ventas</h2>
     <p class="sub">Lo que habéis comprado, lo que costó repararlo y por cuánto lo vendéis. El bot aprende de esto para afinar los precios.</p>
     <div class="tiles t2" id="reg-tiles"></div>
@@ -725,6 +730,25 @@ dialog .df .btn { flex: 1; }
   </form>
 </dialog>
 
+<dialog id="d-plazos" aria-labelledby="dpl-t">
+  <form method="dialog" class="form" id="f-plazos">
+    <div class="dh"><h2 id="dpl-t">Pago a plazos</h2><button class="icon-btn" value="cancel" formnovalidate aria-label="Cerrar">✕</button></div>
+    <div class="db form">
+      <label>¿Qué es?<input type="text" name="concepto" maxlength="60" placeholder="Ej.: iPhone 16 Pro con Klarna" required></label>
+      <div class="dos">
+        <label>Plazos que faltan<input type="number" name="n" min="1" max="24" step="1" value="2" inputmode="numeric" required></label>
+        <label>Importe de cada uno (€)<input type="number" name="importe" min="0" step="0.01" inputmode="decimal" required></label>
+      </div>
+      <div class="dos">
+        <label>Próximo pago<input type="date" name="primero" required></label>
+        <label>Cada<select name="cada" style="width:100%;min-height:42px;background:var(--bg)"><option value="30">mes</option><option value="14">2 semanas</option><option value="7">semana</option></select></label>
+      </div>
+      <p class="sub" id="dpl-res" style="margin:0"></p>
+    </div>
+    <div class="df"><button type="button" class="btn peligro" id="dpl-borrar" hidden>Borrar</button><button type="submit" class="btn verde" value="ok">Guardar</button></div>
+  </form>
+</dialog>
+
 <dialog id="d-pub" aria-labelledby="dp-t">
   <form method="dialog" class="form" id="f-pub">
     <div class="dh"><h2 id="dp-t">Lo hemos publicado</h2><button class="icon-btn" value="cancel" formnovalidate aria-label="Cerrar">✕</button></div>
@@ -855,11 +879,20 @@ async function ghLeer(path, defecto) {
   const j = await r.json();
   return { json: JSON.parse(de64(j.content)), sha: j.sha };
 }
+// «Gulky» pasa a llamarse «Conjunta» (dinero de los dos)
+function renombrarSocios(j) {
+  if (!j || typeof j !== 'object') return j;
+  const cambia = x => { if (x && x.quien === 'Gulky') x.quien = 'Conjunta'; };
+  ['movimientos', 'compras', 'gastos'].forEach(k => (j[k] || []).forEach(cambia));
+  if (j.va) ['cajas', 'ventas'].forEach(k => (j.va[k] || []).forEach(cambia));
+  return j;
+}
 async function cambiar(path, defecto, fn, mensaje) {
   if (!AJ.token) { abrirAjustes('Para guardar desde la web hace falta la clave de GitHub (solo una vez en cada móvil).'); throw new Error('sin clave'); }
   for (let i = 0; i < 4; i++) {
     const { json, sha } = await ghLeer(path, defecto);
-    const nuevo = fn(json) ?? json;
+    let nuevo = fn(json) ?? json;
+    if (path === 'registro.json') nuevo = renombrarSocios(nuevo);
     const r = await gh(path, { method: 'PUT', body: JSON.stringify({ message: mensaje, content: b64(JSON.stringify(nuevo, null, 1)), ...(sha ? { sha } : {}), branch: 'main' }) });
     if (r.ok) return nuevo;
     if (r.status !== 409 && r.status !== 422) throw new Error(r.status === 403 || r.status === 401 ? 'La clave no tiene permiso para escribir (Contents: Read and write)' : 'GitHub respondió ' + r.status);
@@ -882,11 +915,11 @@ async function cargarPropios() {
   if (AJ.token) {
     try {
       const [g, r] = await Promise.all([ghLeer('guardados.json', { items: {} }), ghLeer('registro.json', { compras: [] })]);
-      guardados = g.json; registro = r.json; return;
+      guardados = g.json; registro = renombrarSocios(r.json); return;
     } catch (e) { toast(e.message, true); }
   }
   guardados = await pages('guardados.json', { items: {} });
-  registro = await pages('registro.json', { compras: [] });
+  registro = renombrarSocios(await pages('registro.json', { compras: [] }));
 }
 async function cargarDescartados() {
   if (AJ.token) { try { descartados = (await ghLeer('descartados.json', { items: {} })).json; return; } catch (e) {} }
@@ -1555,10 +1588,10 @@ function finResumen() {
   const gastosTot = gs.reduce((s, g) => s + (num(g.importe) || 0), 0);
   const aportado = movs.reduce((s, m) => s + (num(m.importe) || 0) * (m.tipo === 'aporte' ? 1 : -1), 0) + gs.filter(g => g.pagado === 'bolsillo').reduce((s, g) => s + (num(g.importe) || 0), 0);
   const gastado = cs.reduce((s, c) => s + coste(c), 0) + gastosTot, ingresado = cs.filter(vendida).reduce((s, c) => s + num(c.precio_venta), 0);
-  const v = vaCuentas();
+  const v = vaCuentas(), deuda = plazosPendiente();
   const stock = cs.filter(c => !vendida(c)).reduce((s, c) => s + coste(c), 0) + v.valorStock;
-  const caja = aportado - gastado - v.invertido + ingresado + v.ingresado, extra = num(registro.ajustes?.extra) || 0;
-  return { caja, aportado, stock, total: caja + stock, extra, disponible: caja + extra, gastos: gastosTot, va: v,
+  const caja = aportado - gastado - v.invertido + ingresado + v.ingresado + deuda, extra = num(registro.ajustes?.extra) || 0;
+  return { caja, aportado, stock, total: caja + stock - deuda, deuda, extra, disponible: caja + extra, gastos: gastosTot, va: v,
     beneficio: cs.filter(vendida).reduce((s, c) => s + beneficio(c), 0) - gastosTot + v.beneficio };
 }
 function finObjetivo(mes) {
@@ -1585,6 +1618,8 @@ function serieDinero() {
   const VA = registro.va || {}, cu = vaCuentas().cu;
   (VA.cajas || []).forEach(k => { if (k.fecha) ev.push({ f: k.fecha, caja: -(num(k.total) || 0), ap: 0, st: num(k.total) || 0 }); });
   (VA.ventas || []).filter(x => x.estado === 'vendido').forEach(x => { if (x.fecha) ev.push({ f: x.fecha, caja: x.unidades * num(x.precio), ap: 0, st: -x.unidades * (cu[x.producto] || 0) }); });
+  (registro.plazos || []).forEach(pl => { const pag = pl.pagos || [], tot = pag.reduce((s, x) => s + (num(x.importe) || 0), 0);
+    if (pl.fecha) ev.push({ f: pl.fecha, caja: tot, ap: 0, st: -tot }); pag.forEach(x => x.fecha && ev.push({ f: x.fecha, caja: -(num(x.importe) || 0), ap: 0, st: num(x.importe) || 0 })); });
   if (!ev.length) return [];
   ev.sort((a, b) => a.f.localeCompare(b.f));
   const out = []; let caja = 0, ap = 0, st = 0, i = 0;
@@ -1819,7 +1854,7 @@ $('#dk-comprar').onclick = () => {
 };
 
 // ------------------------------------------------------------------ gastos
-const SOCIOS_BASE = ['Gulky', 'Striker'];
+const SOCIOS_BASE = ['Conjunta', 'Striker'];
 function socios() {
   const extra = [...(registro.movimientos || []).map(m => m.quien), ...(registro.gastos || []).map(g => g.quien)].filter(Boolean);
   return [...new Set([...SOCIOS_BASE, ...extra])];
@@ -1858,6 +1893,46 @@ $('#f-gasto').addEventListener('submit', async e => {
 $('#dg-borrar').onclick = async () => {
   if (!gastoEdit || !confirm('¿Borrar este gasto?')) return;
   if (await guardarReg(j => { j.gastos = (j.gastos || []).filter(x => x.id !== gastoEdit.id); }, 'Borrar gasto', 'Borrado')) $('#d-gasto').close();
+};
+
+// ------------------------------------------------------------------ pagos a plazos
+// registro.plazos = [{id, concepto, fecha, pagos: [{fecha, importe}]}]: los plazos con fecha futura aún están en la caja
+function plazosPendiente() { const h = hoyISO(); return (registro.plazos || []).reduce((s, pl) => s + (pl.pagos || []).filter(x => x.fecha > h).reduce((a, x) => a + (num(x.importe) || 0), 0), 0); }
+function renderPlazos() {
+  const h = hoyISO(), ps = (registro.plazos || []).slice().sort((a, b) => (b.fecha || '').localeCompare(a.fecha || ''));
+  const prox = ps.flatMap(pl => (pl.pagos || []).filter(x => x.fecha > h).map(x => ({ ...x, c: pl.concepto }))).sort((a, b) => a.fecha.localeCompare(b.fecha));
+  const deuda = plazosPendiente();
+  $('#plazos-res').innerHTML = deuda ? `<div class="tiles t2"><div class="tile azul"><b>${eur2(deuda)}</b><span>Falta por pagar</span></div><div class="tile ambar"><b>${eur2(num(prox[0].importe))}</b><span>Próximo: ${esc(fecha(prox[0].fecha))}</span></div></div>` : '';
+  $('#l-plazos').innerHTML = ps.length ? ps.map(pl => { const pend = (pl.pagos || []).filter(x => x.fecha > h);
+    return `<div class="venta-row" data-plazo="${esc(pl.id)}" style="cursor:pointer"><div><b>${esc(pl.concepto)}</b><div class="d">${pend.length ? `Quedan ${pend.length} plazo${pend.length > 1 ? 's' : ''}: ${pend.map(x => esc(fecha(x.fecha)) + ' ' + eur2(num(x.importe))).join(' · ')}` : '✅ Pagado del todo'}</div></div>
+      <div class="p">${eur2(pend.reduce((s, x) => s + (num(x.importe) || 0), 0))}</div></div>`; }).join('')
+    : '<div class="empty">No tenéis nada a plazos.</div>';
+  $$('[data-plazo]').forEach(el => el.onclick = () => abrirPlazos(ps.find(x => x.id === el.dataset.plazo)));
+}
+let plazoEdit = null;
+function abrirPlazos(pl) {
+  plazoEdit = pl || null; const f = $('#f-plazos'); f.reset(); const h = hoyISO(), pend = (pl?.pagos || []).filter(x => x.fecha > h);
+  f.concepto.value = pl?.concepto || ''; f.n.value = pl ? pend.length || 1 : 2; f.importe.value = pend[0]?.importe ?? '';
+  const d = new Date(); d.setMonth(d.getMonth() + 1); f.primero.value = pend[0]?.fecha || d.toISOString().slice(0, 10);
+  $('#dpl-borrar').hidden = !pl; resPlazos(); $('#d-plazos').showModal();
+}
+function fechasPlazos(primero, n, cada) { const out = []; for (let i = 0; i < n; i++) { const d = new Date(primero + 'T12:00'); if (cada === 30) d.setMonth(d.getMonth() + i); else d.setDate(d.getDate() + i * cada); out.push(d.toISOString().slice(0, 10)); } return out; }
+function resPlazos() { const f = $('#f-plazos'), n = +f.n.value || 0, im = num(f.importe.value) || 0;
+  $('#dpl-res').innerHTML = im && f.primero.value ? `Faltan <b>${eur2(n * im)}</b>: ${fechasPlazos(f.primero.value, n, +f.cada.value).map(x => esc(fecha(x))).join(' · ')}. Hasta esas fechas el dinero sigue en la caja.` : ''; }
+['n', 'importe', 'primero', 'cada'].forEach(k => $('#f-plazos')[k].oninput = resPlazos);
+$('#btn-plazos').onclick = () => abrirPlazos();
+$('#f-plazos').addEventListener('submit', async e => {
+  if (e.submitter?.value !== 'ok') return; e.preventDefault();
+  const f = e.target, im = num(f.importe.value), h = hoyISO();
+  if (!im) { toast('Pon el importe de cada plazo', true); return; }
+  const ya = (plazoEdit?.pagos || []).filter(x => x.fecha <= h);   // los ya cobrados se quedan como estaban
+  const pl = { id: plazoEdit?.id || 'pl' + Date.now(), concepto: f.concepto.value.trim(), fecha: plazoEdit?.fecha || h,
+    pagos: [...ya, ...fechasPlazos(f.primero.value, +f.n.value || 1, +f.cada.value).map(x => ({ fecha: x, importe: im }))] };
+  if (await guardarReg(j => { j.plazos = (j.plazos || []).filter(x => x.id !== pl.id); j.plazos.push(pl); }, `Plazos: ${pl.concepto}`, '💳 Plazos apuntados')) $('#d-plazos').close();
+});
+$('#dpl-borrar').onclick = async () => {
+  if (!plazoEdit || !confirm('¿Borrar estos plazos?')) return; const id = plazoEdit.id;
+  if (await guardarReg(j => { j.plazos = (j.plazos || []).filter(x => x.id !== id); }, 'Borrar plazos', 'Borrado')) $('#d-plazos').close();
 };
 
 // ------------------------------------------------------------------ VA · bebidas energéticas
@@ -2329,7 +2404,7 @@ $('#f-ajustes').addEventListener('submit', e => {
 function renderTodo(que = ['mapa', 'guard', 'reg', 'est', 'gas']) {
   if (que.includes('mapa')) renderMapa();
   renderGuardados();
-  if (que.includes('reg')) { renderRegistro(); try { renderVA(); } catch (e) { console.error(e); } }
+  if (que.includes('reg')) { renderRegistro(); try { renderVA(); renderPlazos(); } catch (e) { console.error(e); } }
   if (que.includes('est')) renderEstudio();
   if (que.includes('gas')) renderGasolina();
 }

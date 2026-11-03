@@ -417,6 +417,16 @@
     "fecha": "2026-11-03",
     "quien": "Gulky",
     "total": 70
+   },
+   {
+    "id": "kmw16p52rz7l",
+    "producto": "pmw16fmudq16",
+    "cajas": 1,
+    "precio": 70,
+    "unidades": 10,
+    "fecha": "2026-11-03",
+    "quien": "Gulky",
+    "total": 70
    }
   ],
   "ventas": []

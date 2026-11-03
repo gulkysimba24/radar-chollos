@@ -51,7 +51,7 @@ h3 { font-size: 16px; margin: 18px 0 8px; }
 
 /* navegación inferior */
 nav.tabs { position: fixed; z-index: 1000; left: 0; right: 0; bottom: 0; height: calc(var(--nav) + env(safe-area-inset-bottom)); padding-bottom: env(safe-area-inset-bottom); background: rgba(14, 18, 25, .96); backdrop-filter: blur(8px); border-top: 1px solid var(--line); display: flex; justify-content: center; }
-nav.tabs .in { display: grid; grid-template-columns: repeat(6, 1fr); width: 100%; max-width: 640px; }
+nav.tabs .in { display: grid; grid-template-columns: repeat(7, 1fr); width: 100%; max-width: 640px; }
 nav.tabs button { border: 0; background: none; color: var(--faint); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; font-size: 11px; font-weight: 700; cursor: pointer; position: relative; padding: 0; }
 nav.tabs svg { width: 22px; height: 22px; fill: currentColor; }
 nav.tabs button[aria-current="page"] { color: var(--ink); }
@@ -136,6 +136,22 @@ input[type=checkbox] { accent-color: var(--chollazo); width: 16px; height: 16px;
 
 /* fichas */
 .list { display: flex; flex-direction: column; gap: 12px; }
+.va-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
+.va-prod { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); overflow: hidden; display: flex; flex-direction: column; }
+.va-prod .va-foto { aspect-ratio: 1; background: var(--surface2); display: flex; align-items: center; justify-content: center; font-size: 40px; overflow: hidden; }
+.va-prod .va-foto img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.va-prod .in { padding: 8px 10px 10px; display: flex; flex-direction: column; gap: 4px; font-size: 12.5px; color: var(--muted); }
+.va-prod .in b.n { color: var(--ink); font-size: 15px; }
+.va-prod .stock { font: 800 22px/1 "Barlow Condensed", sans-serif; color: var(--ink); }
+.va-prod .stock.poco { color: var(--ofrece); } .va-prod .stock.cero { color: var(--chollazo); }
+.va-prod .bt { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 6px; }
+.va-prod .bt .btn { min-height: 34px; font-size: 13px; padding: 4px 6px; }
+.va-btns { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; margin: 10px 0 14px; }
+.va-btns .btn { min-height: 44px; font-size: 13.5px; padding: 6px; }
+.va-pill { display: inline-block; font-size: 11.5px; font-weight: 700; border-radius: 99px; padding: 1px 8px; background: var(--surface2); }
+.va-pill.res { color: var(--ofrece); border: 1px solid var(--ofrece); } .va-pill.ven { color: var(--bueno); border: 1px solid var(--bueno); }
+.va-tabla { width: 100%; border-collapse: collapse; font-size: 13px; } .va-tabla th, .va-tabla td { padding: 6px 5px; border-bottom: 1px solid var(--line); text-align: right; white-space: nowrap; }
+.va-tabla th:first-child, .va-tabla td:first-child { text-align: left; } .va-tabla th { color: var(--muted); font-weight: 700; font-size: 12px; }
 .empty { background: var(--surface); border: 1px dashed var(--line2); border-radius: var(--r); padding: 22px; color: var(--muted); text-align: center; }
 .empty b { color: var(--ink); }
 .card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); overflow: hidden; position: relative; scroll-margin-top: 12px; }
@@ -464,6 +480,28 @@ dialog .df .btn { flex: 1; }
     <div class="list" id="l-registro"></div>
   </section>
 
+  <!-- ===================== VA ===================== -->
+  <section id="v-va" data-vista="va" hidden>
+    <h2>🥤 VA · bebidas energéticas</h2>
+    <p class="sub">Cajas de 10 unidades. El dinero sale y entra de la <b>misma caja</b> que los móviles; las cuentas de cada negocio van aparte.</p>
+    <div class="tiles t2" id="va-tiles"></div>
+    <div class="va-btns">
+      <button class="btn verde" type="button" id="va-btn-venta">💶 Venta / reserva</button>
+      <button class="btn" type="button" id="va-btn-caja" style="border-color:var(--ofrece);color:var(--ofrece)">📦 Comprar cajas</button>
+      <button class="btn" type="button" id="va-btn-prod">＋ Nuevo sabor</button>
+    </div>
+    <h2>Sabores y stock</h2>
+    <div class="va-grid" id="va-prods"></div>
+    <h2 style="margin-top:22px">Cómo nos va</h2>
+    <div class="chart" id="va-graf" style="position:relative"></div>
+    <div class="leyenda" style="font-size:12px;color:var(--muted);margin:4px 0 10px"><span style="color:#1BA673">━</span> Beneficio acumulado · <span style="color:#3987E5">━</span> Ventas acumuladas · <span style="color:var(--faint)">┅</span> Invertido en cajas</div>
+    <div class="scroll" style="overflow-x:auto"><table class="va-tabla" id="va-tabla"></table></div>
+    <h2 style="margin-top:22px">Reservas</h2>
+    <div class="list" id="va-reservas"></div>
+    <h2 style="margin-top:22px">Ventas y compras</h2>
+    <div class="list" id="va-movs"></div>
+  </section>
+
   <!-- ===================== ESTUDIO ===================== -->
   <section id="v-estudio" data-vista="estudio" hidden>
     <h2>Estudio del mercado</h2>
@@ -542,6 +580,7 @@ dialog .df .btn { flex: 1; }
     <button type="button" data-tab="registro"><svg viewBox="0 0 24 24"><path d="M19 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z"/></svg>Registro</button>
     <button type="button" data-tab="estudio"><svg viewBox="0 0 24 24"><path d="M3.5 18.5 9.5 12.5l4 4L22 7.9 20.6 6.5l-7.1 8-4-4L2 18z"/></svg>Estudio</button>
     <button type="button" data-tab="gasolina"><svg viewBox="0 0 24 24"><path d="M12 2a7 7 0 0 0-7 7c0 3.1 2.2 6.4 4 8.6V22l3-1.5 3 1.5v-4.4c1.8-2.2 4-5.5 4-8.6a7 7 0 0 0-7-7zm0 9.5A2.5 2.5 0 1 1 12 6.5a2.5 2.5 0 0 1 0 5z"/></svg>Ruta<span class="badge" id="badge-r" hidden></span></button>
+    <button type="button" data-tab="va"><svg viewBox="0 0 24 24"><path d="M8 2h8v3l-1 1v2h1a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2V10a2 2 0 0 1 2-2h1V6L8 5V2zm4.8 8L9.5 15h2.3l-.6 4 3.3-5h-2.3l.6-4z"/></svg>VA<span class="badge" id="badge-va" hidden></span></button>
   </div>
 </nav>
 
@@ -624,6 +663,63 @@ dialog .df .btn { flex: 1; }
         <option value="caja">De la caja común</option><option value="bolsillo">De su bolsillo (cuenta como dinero que pone)</option></select></label>
     </div>
     <div class="df"><button type="button" class="btn peligro" id="dg-borrar" hidden>Borrar</button><button type="submit" class="btn verde" value="ok">Guardar</button></div>
+  </form>
+</dialog>
+
+<dialog id="d-va-prod" aria-labelledby="dvp-t">
+  <form method="dialog" class="form" id="f-va-prod">
+    <div class="dh"><h2 id="dvp-t">Nuevo sabor</h2><button class="icon-btn" value="cancel" formnovalidate aria-label="Cerrar">✕</button></div>
+    <div class="db form">
+      <label>Nombre<input type="text" name="nombre" maxlength="40" placeholder="Ej.: VA Mango" required></label>
+      <label>Foto del producto<input type="file" name="foto" accept="image/*"></label>
+      <div id="dvp-prev" style="max-width:160px"></div>
+      <label>Precio de venta habitual por unidad (€)<input type="number" name="pvp" min="0" step="0.01" inputmode="decimal" placeholder="Opcional"></label>
+      <label>Nota<input type="text" name="nota" maxlength="80" placeholder="Opcional"></label>
+    </div>
+    <div class="df"><button type="button" class="btn peligro" id="dvp-borrar" hidden>Borrar</button><button type="submit" class="btn verde" value="ok">Guardar</button></div>
+  </form>
+</dialog>
+
+<dialog id="d-va-caja" aria-labelledby="dvc-t">
+  <form method="dialog" class="form" id="f-va-caja">
+    <div class="dh"><h2 id="dvc-t">Comprar cajas</h2><button class="icon-btn" value="cancel" formnovalidate aria-label="Cerrar">✕</button></div>
+    <div class="db form">
+      <label>Sabor<select name="producto" style="width:100%;min-height:42px;background:var(--bg)" required></select></label>
+      <div class="dos">
+        <label>Nº de cajas<input type="number" name="cajas" min="1" step="1" value="1" inputmode="numeric" required></label>
+        <label>Precio por caja (€)<input type="number" name="precio" min="0" step="0.01" inputmode="decimal" required></label>
+      </div>
+      <div class="dos">
+        <label>Unidades por caja<input type="number" name="unidades" min="1" step="1" value="10" inputmode="numeric" required></label>
+        <label>Fecha<input type="date" name="fecha" required></label>
+      </div>
+      <label>¿Quién la compra?<select name="quien" style="width:100%;min-height:42px;background:var(--bg)"></select></label>
+      <p class="sub" id="dvc-res" style="margin:0"></p>
+    </div>
+    <div class="df"><button type="submit" class="btn verde" value="ok">Guardar</button></div>
+  </form>
+</dialog>
+
+<dialog id="d-va-venta" aria-labelledby="dvv-t">
+  <form method="dialog" class="form" id="f-va-venta">
+    <div class="dh"><h2 id="dvv-t">Apuntar venta</h2><button class="icon-btn" value="cancel" formnovalidate aria-label="Cerrar">✕</button></div>
+    <div class="db form">
+      <label>Sabor<select name="producto" style="width:100%;min-height:42px;background:var(--bg)" required></select></label>
+      <div class="dos">
+        <label>Unidades<input type="number" name="unidades" min="1" step="1" value="1" inputmode="numeric" required></label>
+        <label>Precio por unidad (€)<input type="number" name="precio" min="0" step="0.01" inputmode="decimal" required></label>
+      </div>
+      <div class="dos">
+        <label>Estado<select name="estado" style="width:100%;min-height:42px;background:var(--bg)"><option value="vendido">✅ Vendido (cobrado)</option><option value="reservado">⏳ Reservado (sin cobrar)</option></select></label>
+        <label>Fecha<input type="date" name="fecha" required></label>
+      </div>
+      <div class="dos">
+        <label>¿Quién vende?<select name="quien" style="width:100%;min-height:42px;background:var(--bg)"></select></label>
+        <label>Cliente<input type="text" name="cliente" maxlength="40" placeholder="Opcional"></label>
+      </div>
+      <p class="sub" id="dvv-res" style="margin:0"></p>
+    </div>
+    <div class="df"><button type="button" class="btn peligro" id="dvv-borrar" hidden>Borrar</button><button type="submit" class="btn verde" value="ok">Guardar</button></div>
   </form>
 </dialog>
 
@@ -1457,9 +1553,11 @@ function finResumen() {
   const gastosTot = gs.reduce((s, g) => s + (num(g.importe) || 0), 0);
   const aportado = movs.reduce((s, m) => s + (num(m.importe) || 0) * (m.tipo === 'aporte' ? 1 : -1), 0) + gs.filter(g => g.pagado === 'bolsillo').reduce((s, g) => s + (num(g.importe) || 0), 0);
   const gastado = cs.reduce((s, c) => s + coste(c), 0) + gastosTot, ingresado = cs.filter(vendida).reduce((s, c) => s + num(c.precio_venta), 0);
-  const stock = cs.filter(c => !vendida(c)).reduce((s, c) => s + coste(c), 0);
-  const caja = aportado - gastado + ingresado, extra = num(registro.ajustes?.extra) || 0;
-  return { caja, aportado, stock, total: caja + stock, extra, disponible: caja + extra, gastos: gastosTot, beneficio: cs.filter(vendida).reduce((s, c) => s + beneficio(c), 0) - gastosTot };
+  const v = vaCuentas();
+  const stock = cs.filter(c => !vendida(c)).reduce((s, c) => s + coste(c), 0) + v.valorStock;
+  const caja = aportado - gastado - v.invertido + ingresado + v.ingresado, extra = num(registro.ajustes?.extra) || 0;
+  return { caja, aportado, stock, total: caja + stock, extra, disponible: caja + extra, gastos: gastosTot, va: v,
+    beneficio: cs.filter(vendida).reduce((s, c) => s + beneficio(c), 0) - gastosTot + v.beneficio };
 }
 function finObjetivo(mes) {
   const r = finResumen() || {};
@@ -1482,6 +1580,9 @@ function serieDinero() {
     if (c.fecha_compra) ev.push({ f: c.fecha_compra, caja: -coste(c), ap: 0, st: coste(c) });
     if (vendida(c) && c.fecha_venta) ev.push({ f: c.fecha_venta, caja: num(c.precio_venta), ap: 0, st: -coste(c) });
   });
+  const VA = registro.va || {}, cu = vaCuentas().cu;
+  (VA.cajas || []).forEach(k => { if (k.fecha) ev.push({ f: k.fecha, caja: -(num(k.total) || 0), ap: 0, st: num(k.total) || 0 }); });
+  (VA.ventas || []).filter(x => x.estado === 'vendido').forEach(x => { if (x.fecha) ev.push({ f: x.fecha, caja: x.unidades * num(x.precio), ap: 0, st: -x.unidades * (cu[x.producto] || 0) }); });
   if (!ev.length) return [];
   ev.sort((a, b) => a.f.localeCompare(b.f));
   const out = []; let caja = 0, ap = 0, st = 0, i = 0;
@@ -1757,6 +1858,171 @@ $('#dg-borrar').onclick = async () => {
   if (await guardarReg(j => { j.gastos = (j.gastos || []).filter(x => x.id !== gastoEdit.id); }, 'Borrar gasto', 'Borrado')) $('#d-gasto').close();
 };
 
+// ------------------------------------------------------------------ VA · bebidas energéticas
+// registro.va = { productos: [{id, nombre, foto, pvp, nota}], cajas: [{id, producto, cajas, precio, unidades, total, fecha, quien}],
+//                 ventas: [{id, producto, unidades, precio, estado: 'vendido'|'reservado', fecha, quien, cliente}] }
+const vaId = p => p + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
+const vaFoto = f => !f ? '' : /^(https?:|data:)/.test(f) ? f : `https://raw.githubusercontent.com/${REPO.owner}/${REPO.repo}/main/${f}`;
+function vaCuentas() {
+  const V = registro.va || {}, P = V.productos || [], K = V.cajas || [], X = V.ventas || [];
+  const por = {}, cu = {};
+  P.forEach(p => por[p.id] = { p, comp: 0, coste: 0, vend: 0, res: 0, ingreso: 0 });
+  K.forEach(k => { const o = por[k.producto]; if (o) { o.comp += k.cajas * k.unidades; o.coste += num(k.total) || 0; } });
+  Object.values(por).forEach(o => cu[o.p.id] = o.comp ? o.coste / o.comp : 0);
+  X.forEach(x => { const o = por[x.producto]; if (!o) return; if (x.estado === 'vendido') { o.vend += x.unidades; o.ingreso += x.unidades * num(x.precio); } else o.res += x.unidades; });
+  let invertido = 0, ingresado = 0, beneficio = 0, valorStock = 0, uds = 0, res = 0, vend = 0;
+  Object.values(por).forEach(o => {
+    o.stock = o.comp - o.vend; o.libre = o.stock - o.res; o.cu = cu[o.p.id]; o.ben = o.ingreso - o.vend * o.cu; o.pm = o.vend ? o.ingreso / o.vend : null;
+    invertido += o.coste; ingresado += o.ingreso; beneficio += o.ben; valorStock += o.stock * o.cu; uds += o.stock; res += o.res; vend += o.vend;
+  });
+  const reservado = X.filter(x => x.estado === 'reservado').reduce((s, x) => s + x.unidades * num(x.precio), 0);
+  return { por, cu, invertido, ingresado, beneficio, valorStock, uds, res, vend, reservado };
+}
+function renderVA() {
+  const V = registro.va || {}, c = vaCuentas(), fin = finResumen();
+  $('#badge-va').hidden = !c.res; $('#badge-va').textContent = c.res;
+  $('#va-tiles').innerHTML = `<div class="tile verde"><b>${signo(Math.round(c.beneficio))}</b><span>Beneficio VA</span></div>
+    <div class="tile azul"><b>${eur(c.ingresado)}</b><span>Vendido (${c.vend} uds.)</span></div>
+    <div class="tile ambar"><b>${eur(c.invertido)}</b><span>Invertido en cajas</span></div>
+    <div class="tile"><b>${c.uds - c.res}</b><span>Uds. libres · ${c.res} reservadas</span></div>
+    <div class="tile ambar"><b>${eur(c.reservado)}</b><span>Reservado sin cobrar</span></div>
+    <div class="tile"><b>${fin ? eur(fin.caja) : '—'}</b><span>Caja común (móviles + VA)</span></div>`;
+  const ps = Object.values(c.por);
+  $('#va-prods').innerHTML = ps.length ? ps.map(o => `<div class="va-prod">
+      <div class="va-foto">${o.p.foto ? `<img src="${esc(vaFoto(o.p.foto))}" alt="${esc(o.p.nombre)}" loading="lazy">` : '🥤'}</div>
+      <div class="in"><b class="n">${esc(o.p.nombre)}</b>
+        <div><span class="stock ${o.libre <= 0 ? 'cero' : o.libre < 5 ? 'poco' : ''}">${o.libre}</span> libres${o.res ? ` · <span class="va-pill res">${o.res} reserv.</span>` : ''}</div>
+        <div>Coste ${o.cu ? eur2(o.cu) : '—'}/ud · vendes ${o.pm ? eur2(o.pm) : (o.p.pvp ? eur2(num(o.p.pvp)) : '—')}</div>
+        <div>${o.vend} vendidas · <b style="color:${o.ben >= 0 ? 'var(--bueno)' : 'var(--chollazo)'}">${signo(Math.round(o.ben))}</b></div>
+        <div class="bt"><button class="btn verde" type="button" data-va-vender="${esc(o.p.id)}">💶 Vender</button><button class="btn" type="button" data-va-caja="${esc(o.p.id)}">📦 Caja</button></div>
+        <button class="btn" type="button" data-va-edit="${esc(o.p.id)}" style="min-height:30px;font-size:12px">✏️ Editar</button></div></div>`).join('')
+    : '<div class="empty">Añade el primer sabor con «＋ Nuevo sabor».</div>';
+  // tabla
+  $('#va-tabla').innerHTML = ps.length ? `<tr><th>Sabor</th><th>Compradas</th><th>Vendidas</th><th>Stock</th><th>Coste/ud</th><th>Venta media</th><th>Margen/ud</th><th>Beneficio</th></tr>`
+    + ps.map(o => `<tr><td>${esc(o.p.nombre)}</td><td>${o.comp}</td><td>${o.vend}</td><td>${o.stock}</td><td>${o.cu ? eur2(o.cu) : '—'}</td><td>${o.pm ? eur2(o.pm) : '—'}</td><td>${o.pm ? eur2(o.pm - o.cu) : '—'}</td><td><b>${signo(Math.round(o.ben))}</b></td></tr>`).join('')
+    + `<tr><td><b>Total</b></td><td>${ps.reduce((s, o) => s + o.comp, 0)}</td><td>${c.vend}</td><td>${c.uds}</td><td></td><td>${c.vend ? eur2(c.ingresado / c.vend) : '—'}</td><td></td><td><b>${signo(Math.round(c.beneficio))}</b></td></tr>` : '';
+  // gráfica: beneficio y ventas acumuladas
+  const ev = [];
+  (V.cajas || []).forEach(k => k.fecha && ev.push({ f: k.fecha, inv: num(k.total) || 0, ven: 0, ben: 0 }));
+  (V.ventas || []).filter(x => x.estado === 'vendido').forEach(x => x.fecha && ev.push({ f: x.fecha, inv: 0, ven: x.unidades * num(x.precio), ben: x.unidades * (num(x.precio) - (c.cu[x.producto] || 0)) }));
+  ev.sort((a, b) => a.f.localeCompare(b.f));
+  const pts = []; let inv = 0, ven = 0, ben = 0, i = 0;
+  if (ev.length) for (let d = new Date(ev[0].f); d <= new Date(hoyISO()); d = new Date(d.getTime() + DIA)) {
+    const iso = d.toISOString().slice(0, 10);
+    while (i < ev.length && ev[i].f <= iso) { inv += ev[i].inv; ven += ev[i].ven; ben += ev[i].ben; i++; }
+    pts.push({ f: iso, inv, ven, ben });
+  }
+  if (pts.length) graficoLineas($('#va-graf'), pts, [{ k: 'ben', n: 'Beneficio', c: '#1BA673' }, { k: 'ven', n: 'Ventas', c: '#3987E5' }, { k: 'inv', n: 'Invertido', c: 'var(--faint)', dash: true }]);
+  else $('#va-graf').innerHTML = '<div class="empty">La gráfica sale cuando apuntéis la primera caja.</div>';
+  // reservas y movimientos
+  const nom = id => c.por[id]?.p.nombre || '¿?';
+  const res = (V.ventas || []).filter(x => x.estado === 'reservado').sort((a, b) => (a.fecha || '').localeCompare(b.fecha || ''));
+  $('#va-reservas').innerHTML = res.length ? res.map(x => `<div class="venta-row"><div><b>${x.unidades} × ${esc(nom(x.producto))}</b> <span class="va-pill res">reservado</span>
+      <div class="d">${esc(fecha(x.fecha))}${x.cliente ? ' · ' + esc(x.cliente) : ''}${x.quien ? ' · ' + esc(x.quien) : ''} · ${eur2(x.unidades * num(x.precio))}</div></div>
+      <div style="display:flex;gap:6px"><button class="btn verde" type="button" data-va-cobrar="${esc(x.id)}" style="min-height:34px">✅ Cobrado</button><button class="btn" type="button" data-va-venta="${esc(x.id)}" style="min-height:34px">✏️</button></div></div>`).join('')
+    : '<div class="empty">No hay nada reservado.</div>';
+  const movs = [...(V.ventas || []).filter(x => x.estado === 'vendido').map(x => ({ t: 'v', x, f: x.fecha })), ...(V.cajas || []).map(k => ({ t: 'c', x: k, f: k.fecha }))]
+    .sort((a, b) => (b.f || '').localeCompare(a.f || '')).slice(0, 60);
+  $('#va-movs').innerHTML = movs.length ? movs.map(m => m.t === 'v'
+      ? `<div class="venta-row" data-va-venta="${esc(m.x.id)}" style="cursor:pointer"><div><b>${m.x.unidades} × ${esc(nom(m.x.producto))}</b> <span class="va-pill ven">vendido</span><div class="d">${esc(fecha(m.x.fecha))}${m.x.cliente ? ' · ' + esc(m.x.cliente) : ''}${m.x.quien ? ' · ' + esc(m.x.quien) : ''} · ${eur2(num(m.x.precio))}/ud</div></div><div class="p" style="color:var(--bueno)">+${eur2(m.x.unidades * num(m.x.precio))}</div></div>`
+      : `<div class="venta-row" data-va-borrar-caja="${esc(m.x.id)}" style="cursor:pointer"><div><b>📦 ${m.x.cajas} caja${m.x.cajas > 1 ? 's' : ''} de ${esc(nom(m.x.producto))}</b><div class="d">${esc(fecha(m.x.fecha))} · ${m.x.cajas * m.x.unidades} uds. · ${eur2(num(m.x.precio))}/caja${m.x.quien ? ' · ' + esc(m.x.quien) : ''}</div></div><div class="p" style="color:var(--ofrece)">−${eur2(num(m.x.total))}</div></div>`).join('')
+    : '<div class="empty">Aún no hay ventas ni compras.</div>';
+  $$('[data-va-vender]').forEach(b => b.onclick = () => vaAbrirVenta(null, b.dataset.vaVender));
+  $$('[data-va-caja]').forEach(b => b.onclick = () => vaAbrirCaja(b.dataset.vaCaja));
+  $$('[data-va-edit]').forEach(b => b.onclick = () => vaAbrirProd((V.productos || []).find(p => p.id === b.dataset.vaEdit)));
+  $$('[data-va-venta]').forEach(b => b.onclick = () => vaAbrirVenta((V.ventas || []).find(x => x.id === b.dataset.vaVenta)));
+  $$('[data-va-cobrar]').forEach(b => b.onclick = async () => { const id = b.dataset.vaCobrar;
+    await guardarReg(j => { const x = (j.va?.ventas || []).find(y => y.id === id); if (x) { x.estado = 'vendido'; x.fecha = hoyISO(); } }, 'VA: reserva cobrada', '✅ Cobrado: ya cuenta en la caja'); });
+  $$('[data-va-borrar-caja]').forEach(b => b.onclick = async () => { if (!confirm('¿Borrar esta compra de cajas?')) return; const id = b.dataset.vaBorrarCaja;
+    await guardarReg(j => { j.va.cajas = (j.va.cajas || []).filter(k => k.id !== id); }, 'VA: borrar compra', 'Borrado'); });
+}
+const vaOpciones = sel => (registro.va?.productos || []).map(p => `<option value="${esc(p.id)}">${esc(p.nombre)}</option>`).join('');
+const vaVa = j => (j.va = j.va || {}, j.va.productos = j.va.productos || [], j.va.cajas = j.va.cajas || [], j.va.ventas = j.va.ventas || [], j.va);
+// foto: se reduce a 600 px y se sube al repo (carpeta va/)
+async function vaSubirFoto(file, id) {
+  const img = await createImageBitmap(file), k = Math.min(1, 600 / Math.max(img.width, img.height));
+  const cv = document.createElement('canvas'); cv.width = Math.round(img.width * k); cv.height = Math.round(img.height * k);
+  cv.getContext('2d').drawImage(img, 0, 0, cv.width, cv.height);
+  const datos = cv.toDataURL('image/jpeg', 0.82).split(',')[1], ruta = `va/${id}-${Date.now().toString(36)}.jpg`;
+  const r = await gh(ruta, { method: 'PUT', body: JSON.stringify({ message: 'VA: foto', content: datos, branch: 'main' }) });
+  if (!r.ok) throw new Error('No se pudo subir la foto (' + r.status + ')');
+  return ruta;
+}
+let vaProdEdit = null;
+function vaAbrirProd(p) {
+  if (!AJ.token) { abrirAjustes('Para guardar desde la web hace falta la clave de GitHub.'); return; }
+  vaProdEdit = p || null; const f = $('#f-va-prod'); f.reset();
+  f.nombre.value = p?.nombre || ''; f.pvp.value = p?.pvp ?? ''; f.nota.value = p?.nota || '';
+  $('#dvp-prev').innerHTML = p?.foto ? `<img src="${esc(vaFoto(p.foto))}" style="width:100%;border-radius:10px">` : '';
+  $('#dvp-t').textContent = p ? 'Editar sabor' : 'Nuevo sabor'; $('#dvp-borrar').hidden = !p;
+  $('#d-va-prod').showModal();
+}
+$('#f-va-prod').foto.onchange = e => { const fl = e.target.files[0]; $('#dvp-prev').innerHTML = fl ? `<img src="${URL.createObjectURL(fl)}" style="width:100%;border-radius:10px">` : ''; };
+$('#f-va-prod').addEventListener('submit', async e => {
+  if (e.submitter?.value !== 'ok') return; e.preventDefault();
+  const f = e.target, id = vaProdEdit?.id || vaId('p'), fl = f.foto.files[0];
+  let foto = vaProdEdit?.foto || '';
+  try { if (fl) { toast('Subiendo la foto…'); foto = await vaSubirFoto(fl, id); } } catch (err) { toast(err.message, true); return; }
+  const p = { id, nombre: f.nombre.value.trim(), foto, pvp: num(f.pvp.value) || null, nota: f.nota.value.trim() };
+  if (await guardarReg(j => { const v = vaVa(j); v.productos = v.productos.filter(x => x.id !== id); v.productos.push(p); }, `VA: sabor ${p.nombre}`, '🥤 Sabor guardado')) $('#d-va-prod').close();
+});
+$('#dvp-borrar').onclick = async () => {
+  if (!vaProdEdit) return; const id = vaProdEdit.id, V = registro.va || {};
+  if ((V.cajas || []).some(k => k.producto === id) || (V.ventas || []).some(x => x.producto === id)) { toast('Tiene compras o ventas apuntadas: bórralas antes', true); return; }
+  if (!confirm('¿Borrar este sabor?')) return;
+  if (await guardarReg(j => { vaVa(j).productos = j.va.productos.filter(x => x.id !== id); }, 'VA: borrar sabor', 'Borrado')) $('#d-va-prod').close();
+};
+function vaSinSabores() { if ((registro.va?.productos || []).length) return false; toast('Primero añade un sabor', true); vaAbrirProd(); return true; }
+function vaAbrirCaja(pid) {
+  if (vaSinSabores()) return;
+  const f = $('#f-va-caja'); f.reset(); f.producto.innerHTML = vaOpciones(); if (pid) f.producto.value = pid;
+  f.quien.innerHTML = socios().map(q => `<option>${esc(q)}</option>`).join(''); f.quien.value = yoSocio() || socios()[0];
+  f.fecha.value = hoyISO(); f.unidades.value = 10; f.cajas.value = 1; vaResCaja(); $('#d-va-caja').showModal();
+}
+function vaResCaja() { const f = $('#f-va-caja'), n = +f.cajas.value || 0, pr = num(f.precio.value) || 0, u = +f.unidades.value || 10;
+  $('#dvc-res').innerHTML = pr ? `Total <b>${eur2(n * pr)}</b> · ${n * u} unidades · <b>${eur2(pr / u)}</b> por unidad. Sale de la caja común.` : ''; }
+['cajas', 'precio', 'unidades'].forEach(k => $('#f-va-caja')[k].oninput = vaResCaja);
+$('#f-va-caja').addEventListener('submit', async e => {
+  if (e.submitter?.value !== 'ok') return; e.preventDefault();
+  const f = e.target, k = { id: vaId('k'), producto: f.producto.value, cajas: +f.cajas.value || 1, precio: num(f.precio.value), unidades: +f.unidades.value || 10, fecha: f.fecha.value, quien: f.quien.value };
+  if (!k.precio) { toast('Pon el precio de la caja', true); return; }
+  k.total = Math.round(k.cajas * k.precio * 100) / 100;
+  if (await guardarReg(j => { vaVa(j).cajas.push(k); }, `VA: ${k.cajas} caja(s) ${k.total} €`, '📦 Compra apuntada')) $('#d-va-caja').close();
+});
+let vaVentaEdit = null;
+function vaAbrirVenta(x, pid) {
+  if (vaSinSabores()) return;
+  vaVentaEdit = x || null; const f = $('#f-va-venta'); f.reset(); f.producto.innerHTML = vaOpciones();
+  f.quien.innerHTML = socios().map(q => `<option>${esc(q)}</option>`).join('');
+  f.producto.value = x?.producto || pid || f.producto.value; f.unidades.value = x?.unidades || 1;
+  const p = (registro.va?.productos || []).find(y => y.id === f.producto.value);
+  f.precio.value = x?.precio ?? (p?.pvp || ''); f.estado.value = x?.estado || 'vendido'; f.fecha.value = x?.fecha || hoyISO();
+  f.quien.value = x?.quien || yoSocio() || socios()[0]; f.cliente.value = x?.cliente || '';
+  $('#dvv-t').textContent = x ? 'Editar venta' : 'Apuntar venta'; $('#dvv-borrar').hidden = !x; vaResVenta(); $('#d-va-venta').showModal();
+}
+function vaResVenta() {
+  const f = $('#f-va-venta'), o = vaCuentas().por[f.producto.value]; if (!o) return;
+  const u = +f.unidades.value || 0, pr = num(f.precio.value) || 0, libres = o.libre + (vaVentaEdit && vaVentaEdit.producto === o.p.id ? vaVentaEdit.unidades * (vaVentaEdit.estado === 'reservado' ? 1 : 1) : 0);
+  $('#dvv-res').innerHTML = `Quedan <b>${libres}</b> libres de este sabor.` + (pr && o.cu ? ` Ganas <b>${eur2(u * (pr - o.cu))}</b> (${eur2(pr - o.cu)}/ud).` : '') + (u > libres ? ' <b style="color:var(--chollazo)">No hay tantas.</b>' : '');
+}
+['producto', 'unidades', 'precio'].forEach(k => $('#f-va-venta')[k].oninput = vaResVenta);
+$('#f-va-venta').producto.onchange = () => { const p = (registro.va?.productos || []).find(y => y.id === $('#f-va-venta').producto.value); if (p?.pvp && !$('#f-va-venta').precio.value) $('#f-va-venta').precio.value = p.pvp; vaResVenta(); };
+$('#f-va-venta').addEventListener('submit', async e => {
+  if (e.submitter?.value !== 'ok') return; e.preventDefault();
+  const f = e.target, x = { id: vaVentaEdit?.id || vaId('v'), producto: f.producto.value, unidades: +f.unidades.value || 1, precio: num(f.precio.value), estado: f.estado.value, fecha: f.fecha.value, quien: f.quien.value, cliente: f.cliente.value.trim() };
+  if (x.precio == null || isNaN(x.precio)) { toast('Pon el precio por unidad', true); return; }
+  const o = vaCuentas().por[x.producto], libres = o.libre + (vaVentaEdit?.producto === x.producto ? vaVentaEdit.unidades : 0);
+  if (x.unidades > libres && !confirm(`Solo quedan ${libres} libres. ¿Apuntarlo igualmente?`)) return;
+  if (await guardarReg(j => { const v = vaVa(j); v.ventas = v.ventas.filter(y => y.id !== x.id); v.ventas.push(x); }, `VA: ${x.estado} ${x.unidades} uds.`, x.estado === 'vendido' ? '💶 Venta apuntada' : '⏳ Reserva apuntada')) $('#d-va-venta').close();
+});
+$('#dvv-borrar').onclick = async () => {
+  if (!vaVentaEdit || !confirm('¿Borrar esta venta?')) return; const id = vaVentaEdit.id;
+  if (await guardarReg(j => { vaVa(j).ventas = j.va.ventas.filter(y => y.id !== id); }, 'VA: borrar venta', 'Borrado')) $('#d-va-venta').close();
+};
+$('#va-btn-prod').onclick = () => vaAbrirProd();
+$('#va-btn-caja').onclick = () => vaAbrirCaja();
+$('#va-btn-venta').onclick = () => vaAbrirVenta();
+
 // ------------------------------------------------------------------ zonas de bajas emisiones y rutas
 // Distrito Centro de Madrid (ZBEDEP): con pegatina B solo se puede entrar para ir a un parking público.
 const CENTRO = [[40.4300, -3.7148], [40.4295, -3.7090], [40.4290, -3.7025], [40.4253, -3.6905], [40.4192, -3.6930], [40.4150, -3.6940],
@@ -1959,7 +2225,7 @@ function irA(tab, sinScroll) {
   if (tab === 'mapa' && map) setTimeout(() => map.invalidateSize(), 50);
   if (!sinScroll) scrollTo({ top: 0 });
   if (tab !== 'mapa' && location.hash.slice(1) !== tab) history.replaceState(null, '', '#' + tab);
-  if (tab === 'mapa' && ['analizar', 'guardados', 'registro', 'estudio', 'gasolina'].includes(location.hash.slice(1))) history.replaceState(null, '', location.pathname);
+  if (tab === 'mapa' && ['analizar', 'guardados', 'registro', 'estudio', 'gasolina', 'va'].includes(location.hash.slice(1))) history.replaceState(null, '', location.pathname);
 }
 $$('[data-tab]').forEach(b => b.onclick = () => irA(b.dataset.tab));
 function syncControls() {
@@ -2029,7 +2295,7 @@ document.addEventListener('click', async e => {
 window.addEventListener('hashchange', () => abrirHash());
 function abrirHash() {
   const h = decodeURIComponent(location.hash.slice(1));
-  if (['analizar', 'guardados', 'registro', 'estudio', 'gasolina', 'mapa'].includes(h)) irA(h);
+  if (['analizar', 'guardados', 'registro', 'estudio', 'gasolina', 'va', 'mapa'].includes(h)) irA(h);
   else if (h && data.chollos.some(c => c.id === h)) select(h);
 }
 
@@ -2057,7 +2323,7 @@ $('#f-ajustes').addEventListener('submit', e => {
 function renderTodo(que = ['mapa', 'guard', 'reg', 'est', 'gas']) {
   if (que.includes('mapa')) renderMapa();
   renderGuardados();
-  if (que.includes('reg')) renderRegistro();
+  if (que.includes('reg')) { renderRegistro(); try { renderVA(); } catch (e) { console.error(e); } }
   if (que.includes('est')) renderEstudio();
   if (que.includes('gas')) renderGasolina();
 }
@@ -2086,7 +2352,7 @@ layer = L.layerGroup().addTo(map);
 $('#lg-1').innerHTML = ICO.apple + '420'; $('#lg-2').innerHTML = ICO.apple + '310'; $('#lg-3').innerHTML = ICO.android + '180';
 $('#lg-4').innerHTML = ICO.apple + '150 ?'; $('#lg-6').innerHTML = ICO.apple + '280'; $('#lg-5').innerHTML = ICO.apple + '90 ' + ICO.reparar;
 syncControls();
-irA(['analizar', 'guardados', 'registro', 'estudio', 'gasolina'].includes(location.hash.slice(1)) ? location.hash.slice(1) : (location.hash.length > 1 ? 'mapa' : S.tab), true);
+irA(['analizar', 'guardados', 'registro', 'estudio', 'gasolina', 'va'].includes(location.hash.slice(1)) ? location.hash.slice(1) : (location.hash.length > 1 ? 'mapa' : S.tab), true);
 recargar(true);
 setInterval(() => { if (!document.querySelector('dialog[open]')) recargar(); }, 5 * 60 * 1000);
 </script>

@@ -41,12 +41,33 @@ def resumen(registro):
     gastado = sum(coste(c) for c in compras) + sum(_n(g.get('importe')) for g in gastos)
     ingresado = sum(_n(c['precio_venta']) for c in compras if vendida(c))
     stock = [c for c in compras if not vendida(c)]
-    caja = aportado - gastado + ingresado
+    v = va(registro)
+    caja = aportado - gastado + ingresado - v['invertido'] + v['ingresado']
+    en_stock = sum(coste(c) for c in stock) + v['valor_stock']
     extra = _n((registro.get('ajustes') or {}).get('extra'))
-    return {'caja': round(caja, 2), 'aportado': round(aportado, 2), 'en_stock': round(sum(coste(c) for c in stock), 2),
-            'total': round(caja + sum(coste(c) for c in stock), 2), 'extra': extra, 'disponible': round(caja + extra, 2),
+    return {'caja': round(caja, 2), 'aportado': round(aportado, 2), 'en_stock': round(en_stock, 2),
+            'total': round(caja + en_stock, 2), 'extra': extra, 'disponible': round(caja + extra, 2),
             'gastos': round(sum(_n(g.get('importe')) for g in gastos), 2),
-            'beneficio': round(sum(_n(c['precio_venta']) - coste(c) for c in compras if vendida(c)) - sum(_n(g.get('importe')) for g in gastos), 2)}
+            'beneficio': round(sum(_n(c['precio_venta']) - coste(c) for c in compras if vendida(c)) - sum(_n(g.get('importe')) for g in gastos)
+                               + v['beneficio'], 2)}
+
+
+def va(registro):
+    """Cuentas del negocio de bebidas VA (comparte la caja con los móviles)."""
+    d = (registro or {}).get('va') or {}
+    comp, coste_p = {}, {}
+    for k in d.get('cajas') or []:
+        comp[k.get('producto')] = comp.get(k.get('producto'), 0) + _n(k.get('cajas')) * _n(k.get('unidades'))
+        coste_p[k.get('producto')] = coste_p.get(k.get('producto'), 0) + _n(k.get('total'))
+    cu = {p: coste_p[p] / comp[p] for p in comp if comp[p]}
+    vend = [x for x in d.get('ventas') or [] if x.get('estado') == 'vendido']
+    ingresado = sum(_n(x.get('unidades')) * _n(x.get('precio')) for x in vend)
+    beneficio = sum(_n(x.get('unidades')) * (_n(x.get('precio')) - cu.get(x.get('producto'), 0)) for x in vend)
+    vendidas = {}
+    for x in vend:
+        vendidas[x.get('producto')] = vendidas.get(x.get('producto'), 0) + _n(x.get('unidades'))
+    valor = sum((comp[p] - vendidas.get(p, 0)) * cu.get(p, 0) for p in comp)
+    return {'invertido': sum(coste_p.values()), 'ingresado': ingresado, 'beneficio': beneficio, 'valor_stock': valor}
 
 
 def objetivo(registro, mes=None):

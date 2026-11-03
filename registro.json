@@ -462,6 +462,21 @@
      "importe": 324
     }
    ]
+  },
+  {
+   "id": "pl1793740833058",
+   "concepto": "10 Cajas Vapers",
+   "fecha": "2026-11-03",
+   "pagos": [
+    {
+     "fecha": "2026-12-03",
+     "importe": 194
+    },
+    {
+     "fecha": "2027-01-03",
+     "importe": 194
+    }
+   ]
   }
  ]
 }

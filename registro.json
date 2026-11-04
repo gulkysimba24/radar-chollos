@@ -319,13 +319,6 @@
     "nota": ""
    },
    {
-    "id": "pmw16fey9xbm",
-    "nombre": "Vaper Love 66",
-    "foto": "va/pmw16fey9xbm-mw16feyr.jpg",
-    "pvp": 11,
-    "nota": ""
-   },
-   {
     "id": "pmw16fmudq16",
     "nombre": "Vaper Watermelon Ice",
     "foto": "va/pmw16fmudq16-mw16fmuu.jpg",
@@ -343,6 +336,13 @@
     "id": "pmw16lxbjn6o",
     "nombre": "Vaper Strawberry Mango",
     "foto": "va/pmw16lxbjn6o-mw16lxc2.jpg",
+    "pvp": 11,
+    "nota": ""
+   },
+   {
+    "id": "pmw16fey9xbm",
+    "nombre": "Vaper Love 66",
+    "foto": "va/pmw16fey9xbm-mw16feyr.jpg",
     "pvp": 11,
     "nota": ""
    }

@@ -449,7 +449,18 @@
     "total": 70
    }
   ],
-  "ventas": []
+  "ventas": [
+   {
+    "id": "vmwk6h5w6qe7",
+    "producto": "pmw16lxbjn6o",
+    "unidades": 1,
+    "precio": 12,
+    "estado": "vendido",
+    "fecha": "2026-11-17",
+    "quien": "Striker",
+    "cliente": "Ayman"
+   }
+  ]
  },
  "plazos": [
   {

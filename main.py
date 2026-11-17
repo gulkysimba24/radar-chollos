@@ -406,8 +406,7 @@ def interesa(a, d=None):
         return False
     if no_es_movil(a, d):
         return False
-    if CAJA and d.get('oferta') and d['oferta'] > CAJA['disponible']:
-        return False                      # no os llega ni contando el extra que podéis poner
+    # si no os llega la caja, se enseña igual (el aviso dice cuánto falta): el dinero entra y sale cada día
     if (getattr(config, 'SOLO_ROTOS_CHOLLAZO', False) and a.get('familia') == 'iphone'
             and d.get('tipo') == 'reparar' and d.get('categoria') != 'chollazo'):
         return False
@@ -1010,6 +1009,7 @@ def ejecutar():
     DESCARTADOS.update(cargar('descartados.json', {}).get('items', {}))
     global CAJA
     CAJA = finanzas.resumen(cargar('registro.json', {}))
+    exportar_stock_va()
     temas = telegram.preparar_temas(cargar('temas.json', {}))
     mercado.aprender(cargar('registro.json', {}), lambda m, c: estimar_venta(precios, m, c))
 
@@ -1119,6 +1119,22 @@ def ejecutar():
           f'{sum(len(v) for v in precios.values())} precios de referencia en {len(precios)} modelos')
 
 
+def exportar_stock_va():
+    """stock_va.json para la página de clientes (stock.html): solo sabor, foto y unidades libres. Nada de precios."""
+    try:
+        va = cargar('registro.json', {}).get('va') or {}
+        uds = {}
+        for k in va.get('cajas') or []:
+            uds[k.get('producto')] = uds.get(k.get('producto'), 0) + int(k.get('cajas') or 0) * int(k.get('unidades') or 0)
+        for x in va.get('ventas') or []:              # vendidas y reservadas ya no están libres
+            uds[x.get('producto')] = uds.get(x.get('producto'), 0) - int(x.get('unidades') or 0)
+        prods = [{'nombre': p.get('nombre'), 'foto': p.get('foto') or '', 'libres': max(0, uds.get(p.get('id'), 0))}
+                 for p in va.get('productos') or []]
+        guardar('stock_va.json', {'actualizado_ms': ahora_ms(), 'productos': prods}, carpeta=WEB)
+    except Exception as e:
+        print(f'aviso: no se pudo exportar el stock de VA: {e}', file=sys.stderr)
+
+
 def solo_web():
     """Lo que se ejecuta nada más guardar algo desde la web: avisar en Telegram y analizar enlaces."""
     global VENTAS
@@ -1129,6 +1145,7 @@ def solo_web():
     mercado.aprender(cargar('registro.json', {}), lambda m, c: estimar_venta(precios, m, c))
     procesar_web(temas, cargar('activos.json', {}), precios)
     guardar('temas.json', temas)
+    exportar_stock_va()
 
 
 if __name__ == '__main__':

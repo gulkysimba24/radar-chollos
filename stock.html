@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>VA · Stock</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@700;800&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+:root { --bg: #0b0d12; --card: #151922; --line: #252b38; --ink: #f2f4f8; --muted: #8a93a6; --ok: #23c38a; --poco: #f5a524; --no: #ff4655; --acc: #a6ff3c; }
+* { box-sizing: border-box; }
+html, body { margin: 0; background: var(--bg); color: var(--ink); font-family: Inter, system-ui, sans-serif; overflow-x: hidden; }
+header { padding: 28px 16px 10px; text-align: center; }
+h1 { font: 800 56px/0.9 "Barlow Condensed", sans-serif; margin: 0; letter-spacing: 2px; color: var(--acc); }
+header p { margin: 8px 0 0; color: var(--muted); font-size: 14px; }
+main { max-width: 900px; margin: 0 auto; padding: 12px 16px 40px; }
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(155px, 1fr)); gap: 12px; }
+.p { background: var(--card); border: 1px solid var(--line); border-radius: 16px; overflow: hidden; }
+.p .f { aspect-ratio: 1; background: #1d2230; display: flex; align-items: center; justify-content: center; font-size: 48px; }
+.p .f img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.p.agotado .f { filter: grayscale(1) opacity(.45); }
+.p .i { padding: 10px 12px 12px; }
+.p b { display: block; font-size: 16px; margin-bottom: 6px; }
+.e { display: inline-block; font-size: 12.5px; font-weight: 700; border-radius: 99px; padding: 3px 10px; border: 1px solid; }
+.e.ok { color: var(--ok); } .e.poco { color: var(--poco); } .e.no { color: var(--no); }
+.pie { text-align: center; color: var(--muted); font-size: 12.5px; margin-top: 22px; }
+.vacio { text-align: center; color: var(--muted); padding: 40px 0; }
+</style>
+</head>
+<body>
+<header><h1>VA</h1><p>Sabores disponibles ahora mismo</p></header>
+<main>
+  <div class="grid" id="grid"><div class="vacio">Cargando…</div></div>
+  <p class="pie" id="pie"></p>
+</main>
+<script>
+const esc = t => String(t ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+fetch('stock_va.json?t=' + Date.now()).then(r => r.ok ? r.json() : { productos: [] }).catch(() => ({ productos: [] })).then(d => {
+  const ps = (d.productos || []).slice().sort((a, b) => (b.libres > 0) - (a.libres > 0) || a.nombre.localeCompare(b.nombre));
+  document.getElementById('grid').innerHTML = ps.length ? ps.map(p => {
+    const e = p.libres <= 0 ? ['no', 'Agotado'] : p.libres < 5 ? ['poco', `Quedan ${p.libres}`] : ['ok', `${p.libres} disponibles`];
+    return `<div class="p ${p.libres <= 0 ? 'agotado' : ''}"><div class="f">${p.foto ? `<img src="${esc(p.foto)}" alt="${esc(p.nombre)}" loading="lazy">` : '🥤'}</div>
+      <div class="i"><b>${esc(p.nombre)}</b><span class="e ${e[0]}">${e[1]}</span></div></div>`;
+  }).join('') : '<div class="vacio">Pronto habrá stock.</div>';
+  if (d.actualizado_ms) document.getElementById('pie').textContent = 'Actualizado ' + new Date(d.actualizado_ms).toLocaleString('es-ES', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+});
+</script>
+</body>
+</html>

@@ -495,6 +495,10 @@ dialog .df .btn { flex: 1; }
       <button class="btn" type="button" id="va-btn-caja" style="border-color:var(--ofrece);color:var(--ofrece)">📦 Comprar cajas</button>
       <button class="btn" type="button" id="va-btn-prod">＋ Nuevo sabor</button>
     </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin:-6px 0 14px">
+      <a class="btn" href="stock.html" target="_blank" rel="noopener" style="min-height:40px;font-size:13px">👁️ Vista para clientes</a>
+      <button class="btn" type="button" id="va-btn-link" style="min-height:40px;font-size:13px">🔗 Copiar enlace</button>
+    </div>
     <button class="btn" type="button" id="va-btn-gasto" style="width:100%;margin:-6px 0 14px;border-color:var(--ofrece);color:var(--ofrece)">🧾 Apuntar otro gasto de VA (envíos, bolsas, hielo…)</button>
     <h2>Sabores y stock</h2>
     <div class="va-grid" id="va-prods"></div>
@@ -2100,6 +2104,8 @@ $('#dvv-borrar').onclick = async () => {
   if (await guardarReg(j => { vaVa(j).ventas = j.va.ventas.filter(y => y.id !== id); }, 'VA: borrar venta', 'Borrado')) $('#d-va-venta').close();
 };
 $('#va-btn-prod').onclick = () => vaAbrirProd();
+$('#va-btn-link').onclick = async () => { const u = new URL('stock.html', location.href).href;
+  try { await navigator.clipboard.writeText(u); toast('🔗 Enlace copiado: mándaselo a los clientes'); } catch { prompt('Copia este enlace:', u); } };
 $('#va-btn-gasto').onclick = () => { gastoNegocio = 'va'; abrirGasto(); };
 $('#va-btn-caja').onclick = () => vaAbrirCaja();
 $('#va-btn-venta').onclick = () => vaAbrirVenta();

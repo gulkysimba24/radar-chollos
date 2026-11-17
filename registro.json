@@ -459,6 +459,16 @@
     "fecha": "2026-11-17",
     "quien": "Striker",
     "cliente": "Ayman"
+   },
+   {
+    "id": "vmwkrf7mj51d",
+    "producto": "pmw16lxbjn6o",
+    "unidades": 1,
+    "precio": 12,
+    "estado": "vendido",
+    "fecha": "2026-11-17",
+    "quien": "Striker",
+    "cliente": "Omar clase"
    }
   ]
  },

@@ -489,6 +489,16 @@
     "fecha": "2026-11-20",
     "quien": "Gulkysimba",
     "cliente": ""
+   },
+   {
+    "id": "vmwqsygizfk7",
+    "producto": "pmw16egkrkyv",
+    "unidades": 1,
+    "precio": 10,
+    "estado": "vendido",
+    "fecha": "2026-11-21",
+    "quien": "Gulkysimba",
+    "cliente": ""
    }
   ]
  },

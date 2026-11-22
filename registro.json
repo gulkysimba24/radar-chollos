@@ -519,6 +519,16 @@
     "fecha": "2026-11-22",
     "quien": "Gulkysimba",
     "cliente": "Haron"
+   },
+   {
+    "id": "vmws4jiua83y",
+    "producto": "pmw16gqxxezl",
+    "unidades": 1,
+    "precio": 10,
+    "estado": "vendido",
+    "fecha": "2026-11-22",
+    "quien": "Gulkysimba",
+    "cliente": ""
    }
   ]
  },

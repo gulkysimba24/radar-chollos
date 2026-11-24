@@ -265,6 +265,16 @@
    "categoria": "Accesorios (fundas, cables…)",
    "fecha": "2026-10-25",
    "pagado": "caja"
+  },
+  {
+   "id": "g1795483723903",
+   "quien": "Conjunta",
+   "importe": 70,
+   "concepto": "Gasolina trabajo",
+   "categoria": "Accesorios (fundas, cables…)",
+   "fecha": "2026-11-24",
+   "pagado": "caja",
+   "negocio": "moviles"
   }
  ],
  "va": {

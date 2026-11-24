@@ -549,6 +549,16 @@
     "fecha": "2026-11-22",
     "quien": "Gulkysimba",
     "cliente": ""
+   },
+   {
+    "id": "vmwv6g89wcas",
+    "producto": "pmw16d1f1744",
+    "unidades": 1,
+    "precio": 10,
+    "estado": "vendido",
+    "fecha": "2026-11-24",
+    "quien": "Gulkysimba",
+    "cliente": ""
    }
   ]
  },

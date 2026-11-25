@@ -599,6 +599,16 @@
     "fecha": "2026-11-25",
     "quien": "Gulkysimba",
     "cliente": "Adam electro 2"
+   },
+   {
+    "id": "vmww5xnxpzj8",
+    "producto": "pmw16lxbjn6o",
+    "unidades": 1,
+    "precio": 12,
+    "estado": "vendido",
+    "fecha": "2026-11-25",
+    "quien": "Gulkysimba",
+    "cliente": ""
    }
   ]
  },

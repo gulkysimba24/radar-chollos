@@ -559,6 +559,16 @@
     "fecha": "2026-11-24",
     "quien": "Gulkysimba",
     "cliente": ""
+   },
+   {
+    "id": "vmwvtszyblso",
+    "producto": "pmw16ey3e6cd",
+    "unidades": 1,
+    "precio": 10,
+    "estado": "vendido",
+    "fecha": "2026-11-25",
+    "quien": "Gulkysimba",
+    "cliente": "WassimMocro"
    }
   ]
  },

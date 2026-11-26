@@ -649,6 +649,16 @@
     "fecha": "2026-11-26",
     "quien": "Striker",
     "cliente": "Amigo jp"
+   },
+   {
+    "id": "vmwy31rzb2rs",
+    "producto": "pmw16egkrkyv",
+    "unidades": 1,
+    "precio": 10,
+    "estado": "vendido",
+    "fecha": "2026-11-26",
+    "quien": "Striker",
+    "cliente": "Mynol"
    }
   ]
  },

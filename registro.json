@@ -649,6 +649,16 @@
     "fecha": "2026-11-26",
     "quien": "Striker",
     "cliente": "Amigo jp"
+   },
+   {
+    "id": "vmwy3061qwxl",
+    "producto": "pmw16lxbjn6o",
+    "unidades": 1,
+    "precio": 10,
+    "estado": "vendido",
+    "fecha": "2026-11-26",
+    "quien": "Striker",
+    "cliente": "Amigo jp"
    }
   ]
  },

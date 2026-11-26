@@ -659,6 +659,16 @@
     "fecha": "2026-11-26",
     "quien": "Striker",
     "cliente": "Mynol"
+   },
+   {
+    "id": "vmwy32ec9iog",
+    "producto": "pmw16ec8u6js",
+    "unidades": 1,
+    "precio": 10,
+    "estado": "vendido",
+    "fecha": "2026-11-26",
+    "quien": "Striker",
+    "cliente": "Mynol"
    }
   ]
  },

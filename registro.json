@@ -719,6 +719,16 @@
     "fecha": "2026-11-27",
     "quien": "Striker",
     "cliente": "Zaka"
+   },
+   {
+    "id": "vmwzgeuhnx7n",
+    "producto": "pmw16egkrkyv",
+    "unidades": 1,
+    "precio": 12,
+    "estado": "vendido",
+    "fecha": "2026-11-27",
+    "quien": "Striker",
+    "cliente": "14plus"
    }
   ]
  },

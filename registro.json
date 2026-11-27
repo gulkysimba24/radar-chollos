@@ -679,6 +679,16 @@
     "fecha": "2026-11-27",
     "quien": "Gulkysimba",
     "cliente": ""
+   },
+   {
+    "id": "vmwyhtlqxrem",
+    "producto": "pmw16d1f1744",
+    "unidades": 1,
+    "precio": 10,
+    "estado": "vendido",
+    "fecha": "2026-11-27",
+    "quien": "Gulkysimba",
+    "cliente": "Cesar 2"
    }
   ]
  },

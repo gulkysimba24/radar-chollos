@@ -699,6 +699,16 @@
     "fecha": "2026-11-27",
     "quien": "Gulkysimba",
     "cliente": "Adri"
+   },
+   {
+    "id": "vmwyrgolhr6x",
+    "producto": "pmw16fmudq16",
+    "unidades": 1,
+    "precio": 12,
+    "estado": "vendido",
+    "fecha": "2026-11-27",
+    "quien": "Gulkysimba",
+    "cliente": "Wael"
    }
   ]
  },

@@ -709,6 +709,16 @@
     "fecha": "2026-11-27",
     "quien": "Gulkysimba",
     "cliente": "Wael"
+   },
+   {
+    "id": "vmwzco3o2x90",
+    "producto": "pmw16lxbjn6o",
+    "unidades": 1,
+    "precio": 10,
+    "estado": "vendido",
+    "fecha": "2026-11-27",
+    "quien": "Striker",
+    "cliente": "Zaka"
    }
   ]
  },

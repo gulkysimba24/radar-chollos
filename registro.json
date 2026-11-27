@@ -669,6 +669,16 @@
     "fecha": "2026-11-26",
     "quien": "Striker",
     "cliente": "Mynol"
+   },
+   {
+    "id": "vmwyhqmwtfa7",
+    "producto": "pmw16ey3e6cd",
+    "unidades": 1,
+    "precio": 10,
+    "estado": "vendido",
+    "fecha": "2026-11-27",
+    "quien": "Gulkysimba",
+    "cliente": ""
    }
   ]
  },

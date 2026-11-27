@@ -729,6 +729,16 @@
     "fecha": "2026-11-27",
     "quien": "Striker",
     "cliente": "14plus"
+   },
+   {
+    "id": "vmwzghdvmo8c",
+    "producto": "pmw16ec8u6js",
+    "unidades": 1,
+    "precio": 10,
+    "estado": "vendido",
+    "fecha": "2026-11-27",
+    "quien": "Striker",
+    "cliente": "Wael"
    }
   ]
  },

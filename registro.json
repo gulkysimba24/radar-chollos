@@ -749,6 +749,16 @@
     "fecha": "2026-11-27",
     "quien": "Striker",
     "cliente": "Wael"
+   },
+   {
+    "id": "vmx0mftlf2kz",
+    "producto": "pmw15cfhwjxo",
+    "unidades": 1,
+    "precio": 10,
+    "estado": "vendido",
+    "fecha": "2026-11-28",
+    "quien": "Gulkysimba",
+    "cliente": ""
    }
   ]
  },
